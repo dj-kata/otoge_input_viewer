@@ -11,9 +11,13 @@ FONT = ('Meiryo', 12)
 FONTs = ('Meiryo', 8)
 
 par_text = partial(sg.Text, font=FONT)
+sg.theme('SystemDefault')
 
 class DispButtons:
     def __init__(self):
+        self.LONG_THRESHOLD = 225
+        self.SIZE_RELEASE_HIST = 100 # リリース計算用
+        self.SIZE_DENSITY_HIST = 100 # density計算用
         self.stop_thread = False # 強制停止用
 
     def ico_path(self, relative_path:str):
@@ -33,13 +37,13 @@ class DispButtons:
 
     def gui(self):
         layout = [
-            [par_text('release: ') ,par_text('', key='release')],
-            [par_text('density: ') ,par_text('', key='density')],
+            [par_text('release: ') ,par_text('', key='release'), par_text('[ms]')],
+            [par_text('density: ') ,par_text('', key='density'), par_text('[notes/s]')],
             [par_text('')],
             [par_text('state_btn: '), par_text('', key='state_btn')],
             [par_text('state_scr: '), par_text('', key='state_scr')],
         ]
-        self.window = sg.Window('iidx_disp', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(0,0))
+        self.window = sg.Window('display iidx controller tool for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(0,0))
 
     def write_state(self,state, release, density):
         with open('buttons.xml', 'w', encoding='utf-8') as f:
@@ -72,10 +76,13 @@ class DispButtons:
         state = [0]*14
         time_down = [-1]*14 # 押し始めた時刻を記録
         release_hist = []
+        density_hist = []
 
-        pre_val = 0
+        pre_scr_val = None
         release_avg = 0
         density = 0
+        write_flag = False
+        pre_scr_is_up = False
 
         while True:
             if self.stop_thread:
@@ -85,24 +92,47 @@ class DispButtons:
                     #print('down', event.button)
                     state[event.button] = 1
                     time_down[event.button] = time.perf_counter()
+                    write_flag = True
                 elif event.type == pygame.JOYBUTTONUP:
+                    write_flag = True
                     state[event.button] = 0
                     tmp_release = (time.perf_counter() - time_down[event.button])*1000
-                    if tmp_release < 225:
+                    if tmp_release < self.LONG_THRESHOLD:
+                        density_hist.append(time.perf_counter())
                         release_hist.append(tmp_release)
-                        if len(release_hist) > 2000:
+                        if len(release_hist) > self.SIZE_RELEASE_HIST:
                             release_hist.pop(0)
                         release_avg = sum(release_hist) / len(release_hist)
+                        self.window['release'].update(f'{release_avg:.1f}')
                         #print('up', event.button, f'{tmp_release:.2f}')
 
                 elif event.type == pygame.JOYAXISMOTION:
-                    if event.value > pre_val:
-                        print('scratch up')
-                    else:
-                        print('scratch down')
-                    pre_val = event.value
-                self.write_state(state, release_avg, density)
-            time.sleep(0.001)
+                    if pre_scr_val is not None:
+                        if event.value > pre_scr_val:
+                            self.window['state_scr'].update('up')
+                            if not pre_scr_is_up:
+                                write_flag = True
+                                density_hist.append(time.perf_counter())
+                            pre_scr_is_up = True
+                        elif event.value < pre_scr_val:
+                            self.window['state_scr'].update('down')
+                            if pre_scr_is_up:
+                                write_flag = True
+                                density_hist.append(time.perf_counter())
+                            pre_scr_is_up = False
+                    pre_scr_val = event.value
+                if write_flag: # 値が変更された場合のみxml更新
+                    self.window['state_btn'].update(str(state))
+                    self.write_state(state, release_avg, density)
+                    write_flag = False
+
+                    # densityを計算
+                    density_hist = density_hist[-self.SIZE_DENSITY_HIST:]
+                    if len(density_hist) == self.SIZE_DENSITY_HIST:
+                        dur = density_hist[-1] - density_hist[0]
+                        density = 100 / dur
+                        self.window['density'].update(f"{density:.1f}")
+            #time.sleep(0.001)
 
         joystick.quit()
         pygame.quit()
