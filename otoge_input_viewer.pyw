@@ -17,16 +17,10 @@ FONTs = ('Meiryo', 8)
 par_text = partial(sg.Text, font=FONT)
 sg.theme('SystemDefault')
 
-class gui_mode(Enum):
-    init = 0
-    main = 1
-    settings = 2
-
 class DispButtons:
     def __init__(self):
         """コンストラクタ
         """
-        self.gui_mode = gui_mode.init
         self.settings = Settings()
         self.window = None
         self.window_settings = None
@@ -50,8 +44,6 @@ class DispButtons:
             _type_: _description_
         """
         if self.window is None:
-            return False
-        if self.gui_mode is not gui_mode.main:
             return False
         try:
             self.window[target].update(value)
@@ -93,7 +85,6 @@ class DispButtons:
         ]
         layout = [
             [sg.Menubar(menuitems, key='menu')],
-            [par_text('state: ') ,par_text('', key='state')],
             [par_text('release: ') ,par_text('', key='release'), par_text('[ms]')],
             [par_text('density: ') ,par_text('', key='density'), par_text('[notes/s]')],
             [par_text('')],
@@ -104,13 +95,11 @@ class DispButtons:
         if self.joystick is not None:
             self.update_string('device1', f'{self.settings.connected_idx}.{self.joystick.get_name()}')
         self.window = sg.Window('Otoge input viewer for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(self.settings.lx,self.settings.ly))
-        self.gui_mode = gui_mode.main
 
     def gui_settings(self):
         """設定画面の準備
         """
         # mainスレッド以外への遷移はすぐにやっておく
-        self.gui_mode = gui_mode.settings
         layout = [
             [par_text('threshold for LN(default=225):',
                       tooltip='Set the time for determining long notes.\n何ms以上をCNとみなすかを設定。\ndefault=225'),
@@ -124,6 +113,12 @@ class DispButtons:
         ]
         # modal=Trueによって元のウィンドウを操作できなくする
         self.window_settings = sg.Window('Settings - Otoge input viewer for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(self.settings.lx,self.settings.ly), modal=True)
+        while True:
+            ev, val = self.window_settings.read()
+            if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
+                self.update_settings(val)
+                self.window_settings.close()
+                break
 
     def thread_write(self):
         """メンバ変数をxml出力するためのスレッド。皿や密度などの計算を正確に行うために別スレッド化する。
@@ -247,15 +242,13 @@ class DispButtons:
                     elif event.type == pygame.JOYAXISMOTION:
                         if pre_scr_val is not None:
                             if event.value > pre_scr_val:
-                                if self.gui_mode == gui_mode.main:
-                                    self.window['state_scr'].update('up')
+                                self.window['state_scr'].update('up')
                                 if not pre_scr_is_up:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[0] = 1
                                 pre_scr_is_up = True
                             elif event.value < pre_scr_val:
-                                if self.gui_mode == gui_mode.main:
-                                    self.window['state_scr'].update('down')
+                                self.window['state_scr'].update('down')
                                 if pre_scr_is_up:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[1] = 1
@@ -264,9 +257,8 @@ class DispButtons:
             #time.sleep(0.001)
             except Exception:
                 print(traceback.format_exc())
-                if self.gui_mode == gui_mode.main:
-                    self.window['state'].update(f'NG')
-                    self.window['state'].update(text_color='#ff0000')
+                self.window['state'].update(f'NG')
+                self.window['state'].update(text_color='#ff0000')
                 break
 
         #joystick.quit()
@@ -326,17 +318,12 @@ class DispButtons:
             ev, val = self.window.read()
             print(ev)
             if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
-                print(f"exit! (mode = {self.gui_mode.name})")
-                if self.gui_mode == gui_mode.settings:
-                    self.update_settings(val)
-                    self.window_settings.close()
-                if self.gui_mode == gui_mode.main: # 終了
-                    self.stop_thread = True
-                    #self.th_detect.join()
-                    #self.th_write.join()
-                    self.settings.save()
-                    self.settings.disp()
-                    break
+                self.stop_thread = True
+                #self.th_detect.join()
+                #self.th_write.join()
+                self.settings.save()
+                self.settings.disp()
+                break
             elif ev == 'settings':
                 self.gui_settings()
             elif ev == 'btn_change':
