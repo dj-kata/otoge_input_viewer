@@ -25,7 +25,6 @@ class DispButtons:
     def __init__(self):
         self.gui_mode = gui_mode.init
         self.settings = Settings()
-        self.connected_idx = None
         self.window = None
         self.stop_thread = False # 強制停止用
 
@@ -114,6 +113,20 @@ class DispButtons:
 
         print('detect thread started')
 
+        # 起動時のコントローラ接続
+        cnt = pygame.joystick.get_count()
+        if cnt > 0:
+            if self.settings.connected_idx == None:
+                self.settings.connected_idx = 0
+            self.settings.connected_idx = min(self.settings.connected_idx, cnt-1)
+            self.settings.connected_idx = self.settings.connected_idx
+            joystick = pygame.joystick.Joystick(self.settings.connected_idx)
+            joystick.init()
+            if self.gui_mode == gui_mode.main:
+                self.window['state'].update(f'OK')
+                self.window['state'].update(text_color='#0000ff')
+                self.window['device1'].update(f'{self.settings.connected_idx}.{joystick.get_name()}')
+
         while True:
             if self.stop_thread:
                 print('stop detect thread')
@@ -124,18 +137,10 @@ class DispButtons:
                     if (event.type == pygame.JOYDEVICEADDED):
                         tmp = pygame.joystick.Joystick(event.device_index)
                         print(event.device_index, tmp.get_name())
-                        if (self.connected_idx == None) and (event.device_index == 0):
-                            joystick = pygame.joystick.Joystick(0)
-                            joystick.init()
-                            if self.gui_mode == gui_mode.main:
-                                self.window['state'].update(f'OK')
-                                self.window['state'].update(text_color='#0000ff')
-                                self.window['device1'].update(f'{event.device_index}.{joystick.get_name()}')
-                            self.connected_idx = event.device_index
                     elif (event.type == pygame.JOYDEVICEREMOVED):
                         print(f'コントローラ{event.instance_id} 接続解除')
                     elif event.type == pygame.JOYBUTTONDOWN:
-                        if event.joy == self.connected_idx:
+                        if event.joy == self.settings.connected_idx:
                             if event.button >= 14:
                                 continue
                             #print('down', event.button)
@@ -143,7 +148,7 @@ class DispButtons:
                             time_down[event.button] = time.perf_counter()
                             write_flag = True
                     elif event.type == pygame.JOYBUTTONUP:
-                        if event.joy == self.connected_idx:
+                        if event.joy == self.settings.connected_idx:
                             if event.button >= 14:
                                 continue
                             write_flag = True
@@ -204,11 +209,11 @@ class DispButtons:
     def change_device(self):
         print('change device')
         cnt = pygame.joystick.get_count()
-        self.connected_idx = (self.connected_idx + 1) % cnt
-        joystick = pygame.joystick.Joystick(self.connected_idx)
+        self.settings.connected_idx = (self.settings.connected_idx + 1) % cnt
+        joystick = pygame.joystick.Joystick(self.settings.connected_idx)
         joystick.init()
         if self.gui_mode == gui_mode.main:
-            self.window['device1'].update(f'{self.connected_idx}.{joystick.get_name()}')
+            self.window['device1'].update(f'{self.settings.connected_idx}.{joystick.get_name()}')
 
     def update_settings(self, val):
         if str(self.settings.ln_threshold) != val['ln_threshold']:
@@ -234,6 +239,9 @@ class DispButtons:
         self.th = threading.Thread(target=self.detect, daemon=True)
         self.th.start()
         while True:
+            self.settings.lx = self.window.current_location()[0]
+            self.settings.ly = self.window.current_location()[1]
+            self.settings.connected_idx = self.settings.connected_idx
             ev, val = self.window.read()
             if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
                 print(f"exit! (mode = {self.gui_mode.name})")
@@ -244,6 +252,7 @@ class DispButtons:
                     self.th.join()
                     del self.th
                     self.settings.save()
+                    self.settings.disp()
                     break
                 else:
                     self.gui_main()
