@@ -23,6 +23,8 @@ class gui_mode(Enum):
 
 class DispButtons:
     def __init__(self):
+        """コンストラクタ
+        """
         self.gui_mode = gui_mode.init
         self.settings = Settings()
         self.window = None
@@ -44,6 +46,8 @@ class DispButtons:
         return os.path.join(base_path, relative_path)
 
     def gui_main(self):
+        """メイン画面の準備
+        """
         if self.window:
             self.window.close()
         menuitems = [
@@ -63,6 +67,8 @@ class DispButtons:
         self.gui_mode = gui_mode.main
 
     def gui_settings(self):
+        """設定画面の準備
+        """
         if self.window:
             self.window.close()
         layout = [
@@ -80,6 +86,14 @@ class DispButtons:
         self.gui_mode = gui_mode.settings
 
     def write_state(self, state, scratch, release, density):
+        """現在のキー入力状態をxmlファイルに出力
+
+        Args:
+            state (list(int)): キー入力状態(1-7鍵 *2)。0/1
+            scratch (list(int)): 皿入力状態(up/down *2)
+            release (float): 平均リリース時間
+            density (float): 平均密度
+        """
         with open('buttons.xml', 'w', encoding='utf-8') as f:
             f.write(f'<?xml version="1.0" encoding="utf-8"?>\n')
             f.write("<Items>\n")
@@ -92,6 +106,8 @@ class DispButtons:
             f.write("</Items>\n")
 
     def detect(self):
+        """コントローラ入力を監視するスレッド。
+        """
         pygame.init()
         pygame.joystick.init()
 
@@ -207,6 +223,8 @@ class DispButtons:
         print('detect thread end')
 
     def change_device(self):
+        """監視対象となるデバイスを変更する。外のコントローラがある場合はidxを1進める。
+        """
         print('change device')
         cnt = pygame.joystick.get_count()
         self.settings.connected_idx = (self.settings.connected_idx + 1) % cnt
@@ -216,6 +234,11 @@ class DispButtons:
             self.window['device1'].update(f'{self.settings.connected_idx}.{joystick.get_name()}')
 
     def update_settings(self, val):
+        """設定画面の値を反映する。設定画面を閉じる時に実行する。
+
+        Args:
+            val (dict): sg.windowのevent
+        """
         if str(self.settings.ln_threshold) != val['ln_threshold']:
             try:
                 self.settings.ln_threshold = int(val['ln_threshold'])
@@ -233,6 +256,8 @@ class DispButtons:
                 pass
 
     def main(self):
+        """メイン関数
+        """
         #pygame.init()
         self.stop_thread = False
         self.gui_main()
