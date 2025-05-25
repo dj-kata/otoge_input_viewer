@@ -12,13 +12,13 @@
             height: 600px;
             background-color: rgba(0, 0, 0, 0.99);
             margin: 0px;
-            padding: 20px;
+            padding: 0px;
             overflow: hidden;
             font-family: 'RocknRoll One', sans-serif;
             color:#aaddff;   
             font-size:2px;
             color: #fff;
-            text-shadow: 6px 6px 0 #000,
+            text-shadow: 2px 2px 0 #000,
                          -2px 2px 0 #000,
                          2px -2px 0 #000,
                          -2px -2px 0 #000;
@@ -29,6 +29,9 @@
             }
             tr :nth-child(2){
                 height: 30px;
+            }
+            table#disp{
+                border-spacing: 10px 4px;
             }
             table#disp td{
                 font-size: 4px;
@@ -45,6 +48,8 @@
                 text-align: left;
                 font-size: 16px;
                 padding-left: 13px;
+                border-spacing: 0 0;
+                line-height: 2px;
             }
             .scr-top{
               background: #000000;
@@ -62,7 +67,7 @@
               text-decoration: none;
               box-shadow: none;
             }
-            .scr-bottom {
+            .scr-down {
               border: 2px #cccccc solid;
               background: #000000;
               border-radius: 0% 0% 40px 40px;
@@ -129,11 +134,11 @@
                     $('.scr-top').css('background', '#000000')
                 }
                 if (scr[2] == "1"){
-                    $('.scr-bottom').css('box-shadow', pushed)
-                    $('.scr-bottom').css('background', '#aaddff')
+                    $('.scr-down').css('box-shadow', pushed)
+                    $('.scr-down').css('background', '#aaddff')
                 }else if (scr[2] == "0"){
-                    $('.scr-bottom').css('box-shadow', 'none')
-                    $('.scr-bottom').css('background', '#000000')
+                    $('.scr-down').css('box-shadow', 'none')
+                    $('.scr-down').css('background', '#000000')
                 }
                 if (release != ""){
                     $('release').html(release);
@@ -156,33 +161,40 @@
 </head>
 <body>
   <div id="all">
-    <table id="disp">
+    <table id="outer">
         <tr>
-            <td><div class="scr-top"></div></td>
-            <td></td>
-            <td></td>
-            <td id="btn2" class="btn"></td>
-            <td></td>
-            <td id="btn4" class="btn"></td>
-            <td></td>
-            <td id="btn6" class="btn"></td>
-            <td></td>
-        </tr>
-    </table>
-    <table id="space">
-        <tr style="padding:50px"><td></td></tr>
-    </table>
-    <table id="disp">
-        <tr>
-            <td><div class="scr-bottom"></div></td>
-            <td></td>
-            <td id="btn1" class="btn"></td>
-            <td></td>
-            <td id="btn3" class="btn"></td>
-            <td></td>
-            <td id="btn5" class="btn"></td>
-            <td></td>
-            <td id="btn7" class="btn"></td>
+            <td>
+                <table id="disp">
+                    <tr>
+                        <td><div class="scr-top"></div></td>
+                    </tr>
+
+                    <tr>
+                        <td><div class="scr-down"></div></td>
+                    </tr>
+                </table>
+            </td>
+
+            <td>
+                <center>
+                    <table id="disp">
+                        <tr>
+                            <td id="btn2" class="btn"></td>
+                            <td id="btn4" class="btn"></td>
+                            <td id="btn6" class="btn"></td>
+                        </tr>
+                    </table>
+                </center>
+                <table id="disp">
+                    <tr>
+                        <td id="btn1" class="btn"></td>
+                        <td id="btn3" class="btn"></td>
+                        <td id="btn5" class="btn"></td>
+                        <td id="btn7" class="btn"></td>
+                    </tr>
+                </table>
+            </td>
+
         </tr>
     </table>
     <table class="info">
