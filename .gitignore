@@ -1,0 +1,8 @@
+build/*
+__pycache__/*
+otoge_input_viewer/*
+dist/*
+*.pkl
+*.spec
+*.zip
+*.xml
