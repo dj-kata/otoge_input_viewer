@@ -7,21 +7,30 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&display=swap" rel="stylesheet">
         <style>
+            html{
+                height: 100%;
+            }
             body { 
-            width: 600px;
-            height: 600px;
-            background-color: rgba(0, 0, 0, 0.99);
-            margin: 0px;
-            padding: 0px;
-            overflow: hidden;
-            font-family: 'RocknRoll One', sans-serif;
-            color:#aaddff;   
-            font-size:2px;
-            color: #fff;
-            text-shadow: 2px 2px 0 #000,
-                         -2px 2px 0 #000,
-                         2px -2px 0 #000,
-                         -2px -2px 0 #000;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.99);
+                margin: 0px;
+                padding: 0px;
+                font-family: 'RocknRoll One', sans-serif;
+                color:#aaddff;   
+                font-size:2px;
+                color: #fff;
+                text-shadow: 2px 2px 0 #000,
+                             -2px 2px 0 #000,
+                             2px -2px 0 #000,
+                             -2px -2px 0 #000;
+            }
+            .background{
+                height: 100%;
+                background-size: 100% 100%;
+                background-position: left top;
+                background-repeat: no-repeat;
+                margin: 0;
+                padding: 0;
             }
             :root{
                 --num: 20;
@@ -160,7 +169,7 @@
 </script>
 </head>
 <body>
-  <div id="all">
+  <div class="background">
     <table id="outer">
         <tr>
             <td>
