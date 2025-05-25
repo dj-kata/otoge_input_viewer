@@ -1,0 +1,274 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>hoge</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&display=swap" rel="stylesheet">
+        <style>
+            html{
+                height: 100%;
+            }
+            body { 
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.99);
+                margin: 0px;
+                padding: 0px;
+                font-family: 'RocknRoll One', sans-serif;
+                color:#aaddff;   
+                font-size:2px;
+                color: #fff;
+                text-shadow: 2px 2px 0 #000,
+                             -2px 2px 0 #000,
+                             2px -2px 0 #000,
+                             -2px -2px 0 #000;
+            }
+            .background{
+                height: 100%;
+                background-size: 100% 100%;
+                background-position: left top;
+                background-repeat: no-repeat;
+                margin: 0;
+                padding: 0;
+            }
+            :root{
+                --num: 20;
+                --skip-no-update: 0; /* 1:更新のない行を飛ばす */
+            }
+            tr :nth-child(2){
+                height: 30px;
+            }
+            table#disp{
+                border-spacing: 10px 4px;
+            }
+            table#ABCD td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
+                font-size: 4px;
+                width: 30px;
+                height: 30px;
+                line-height: 1px;
+            }
+            table#LR td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
+                font-size: 4px;
+                width: 25px;
+                height: 13px;
+                line-height: 1px;
+            }
+            td.btn{
+                box-shadow: none;
+                border: 2px solid #cccccc;
+            }
+            td.btn-u{
+                box-shadow: none;
+                border: 2px solid #cccccc;
+            }
+            td.btn-d{
+                box-shadow: none;
+                border: 2px solid #cccccc;
+            }
+            table.info{
+                text-align: left;
+                font-size: 16px;
+                padding-left: 13px;
+                border-spacing: 0 0;
+                line-height: 2px;
+            }
+            .tumami-l{
+              background: #000000;
+              border: 2px #cccccc solid;
+              border-radius: 70% 0% 0% 70%;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 10px;
+              height: 15px;
+              line-height: 3;
+              margin: 0px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
+            }
+            .tumami-r {
+              border: 2px #cccccc solid;
+              background: #000000;
+              border-radius: 0 100% 100% 0;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 10px;
+              height: 15px;
+              line-height: 3;
+              margin: 0px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
+            }
+        </style>
+    <body>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script>
+        function loadXml() {
+            var getxml = $.ajax({
+                url: '../buttons.xml',
+                type: 'GET',
+                dataType: 'xml',
+                cache: false
+            });
+            var release = 0.0;
+            var density = 0.0;
+            getxml.done(function(xml){
+                // xmlデータからほしいデータをfindで探し処理
+                var out = "";
+                var scr_up = $(xml).find('Items scr_up').text();
+                var scr_down = $(xml).find('Items scr_down').text();
+                release = $(xml).find('Items release').text();
+                density = $(xml).find('Items density').text();
+                var pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
+                var pushed_red = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #ff8d22, 0 0 20px #ff8d22, 0 0 10px #ff8d22, 0 0 40px #ff8d22, 0 0 60px #ff8d22";
+                var not_pushed = "0 0 10px #fff"
+                var btn = [];
+                var scr = [];
+                for (let i=1; i<8; i++){
+                    btn.push($(xml).find('Items btn'+i).text())
+                }
+                for (let i=1; i<5; i++){
+                    scr.push($(xml).find('Items scr'+i).text())
+                }
+
+                for (let i=1; i<5; i++){
+                    if (btn[i] == ""){
+                        // 何もしない
+                    }
+                    else if (btn[i] == "1"){
+                        $('#btn'+i).css('box-shadow', pushed)
+                        $('#btn'+i).css('background', '#aaddff')
+                    }else{
+                        $('#btn'+i).css('box-shadow', 'none')
+                        $('#btn'+i).css('background', '#000000')
+                    }
+                }
+                for (let i=5; i<8; i++){
+                    if (btn[i] == ""){
+                        // 何もしない
+                    }
+                    else if (btn[i] == "1"){
+                        $('#btn'+i).css('box-shadow', pushed_red)
+                        $('#btn'+i).css('background', '#ff2277')
+                    }else{
+                        $('#btn'+i).css('box-shadow', 'none')
+                        $('#btn'+i).css('background', '#000000')
+                    }
+                }
+                // L
+                if (scr[1] == "1"){
+                    $('#0-l').css('box-shadow', pushed)
+                    $('#0-l').css('background', '#aaddff')
+                }else if (scr[1] == "0"){
+                    $('#0-l').css('box-shadow', 'none')
+                    $('#0-l').css('background', '#000000')
+                }
+                if (scr[0] == "1"){
+                    $('#0-r').css('box-shadow', pushed)
+                    $('#0-r').css('background', '#aaddff')
+                }else if (scr[0] == "0"){
+                    $('#0-r').css('box-shadow', 'none')
+                    $('#0-r').css('background', '#000000')
+                }
+                // R
+                if (scr[3] == "1"){
+                    $('#1-l').css('box-shadow', pushed_red)
+                    $('#1-l').css('background', '#ff2277')
+                }else if (scr[3] == "0"){
+                    $('#1-l').css('box-shadow', 'none')
+                    $('#1-l').css('background', '#000000')
+                }
+                if (scr[2] == "1"){
+                    $('#1-r').css('box-shadow', pushed_red)
+                    $('#1-r').css('background', '#ff2277')
+                }else if (scr[2] == "0"){
+                    $('#1-r').css('box-shadow', 'none')
+                    $('#1-r').css('background', '#000000')
+                }
+                if (release != ""){
+                    $('release').html(release);
+                }
+                if (density != ""){
+                    $('density').html(density);
+                }
+
+            });
+            getxml.fail(function(err) {
+                // alert('failed');
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var roopTimer = setInterval(loadXml, 30);
+        });
+
+</script>
+</head>
+<body>
+  <div class="background">
+    <table id="outer">
+        <tr> <!-- ABCD -->
+            <td>
+                <table id="tumami">
+                    <tr> <!-- つまみ -->
+                        <td><div id="0-l" class="tumami-l"></div></td>
+                        <td><div id="0-r" class="tumami-r"></div></td>
+                    </tr>
+                </table>
+            </td>
+            <td></td>
+            <td>
+                <table id="tumami">
+                    <tr> <!-- つまみ -->
+                        <td><div id="1-l" class="tumami-l"></div></td>
+                        <td><div id="1-r" class="tumami-r"></div></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+
+        <tr> <!-- ABCD -->
+            <td></td>
+            <td>
+                <table id="ABCD">
+                    <tr>
+                        <td id="btn1" class="btn-u"></td>
+                        <td id="btn2" class="btn-u"></td>
+                        <td id="btn3" class="btn-u"></td>
+                        <td id="btn4" class="btn-u"></td>
+                    </tr>
+                </table>
+            </td>
+            <td></td>
+        </tr>
+
+        <tr> <!-- LR -->
+            <td></td>
+            <td>
+                <center>
+                <table id="LR">
+                    <tr>
+                        <td id="btn5" class="btn-d"></td>
+                        <td id="spacer1" class="btn-x"></td>
+                        <td id="btn6" class="btn-d"></td>
+                    </tr>
+                </table>
+                </center>
+            </td>
+            <td></td>
+        </tr>
+
+    </table>
+    <table class="info">
+        <tr><td>release:&nbsp;</td><td><release></release> ms</td></tr>
+        <tr><td>density:&nbsp;</td><td><density></density> n/s</td></tr>
+    </table>
+  </div>
+</body>
+</html>
