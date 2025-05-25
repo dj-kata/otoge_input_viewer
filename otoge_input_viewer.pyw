@@ -7,7 +7,7 @@ from functools import partial
 import os
 import threading
 import traceback
-from settings import Settings
+from settings import Settings, playmode
 from enum import Enum
 import copy
 import subprocess
@@ -150,6 +150,7 @@ class DispButtons:
             if (pre_state != self.state) or (pre_scratch != self.scratch) or (pre_density != self.density):
                 self.update_string('density', f"{self.density:.1f}")
                 self.update_string('state_btn', str(self.state))
+                self.update_string('state_scr', str(self.scratch))
                 self.write_state()
                 self.scratch = [0]*4
                 pre_state = copy.copy(self.state)
@@ -190,7 +191,7 @@ class DispButtons:
         self.density_hist = []
 
         pre_scr_val = None
-        pre_scr_is_up = False
+        pre_scr_is_up = [False, False]
 
         logger.debug('detect thread started')
 
@@ -243,17 +244,15 @@ class DispButtons:
                     elif event.type == pygame.JOYAXISMOTION:
                         if pre_scr_val is not None:
                             if event.value > pre_scr_val:
-                                self.gui.window['state_scr'].update('up')
-                                if not pre_scr_is_up:
+                                if not pre_scr_is_up[0]:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[0] = 1
-                                pre_scr_is_up = True
+                                pre_scr_is_up[0] = True
                             elif event.value < pre_scr_val:
-                                self.gui.window['state_scr'].update('down')
-                                if pre_scr_is_up:
+                                if pre_scr_is_up[0]:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[1] = 1
-                                pre_scr_is_up = False
+                                pre_scr_is_up[0] = False
                         pre_scr_val = event.value
             #time.sleep(0.001)
             except Exception:
@@ -302,6 +301,10 @@ class DispButtons:
             except Exception:
                 pass
         self.settings.debug_mode = settings['debug_mode']
+        if settings['playmode_iidx_sp']:
+            self.settings.playmode = playmode.iidx_sp
+        elif settings['playmode_sdvx']:
+            self.settings.playmode = playmode.sdvx
 
     def main(self):
         """メイン関数兼GUI周りを扱うスレッド。

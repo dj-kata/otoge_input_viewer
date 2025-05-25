@@ -1,6 +1,11 @@
 import pickle, os
-
+from enum import Enum
 savefile = 'oiv_conf.pkl'
+
+class playmode(Enum):
+    iidx_sp=0
+    iidx_dp=1
+    sdvx=2
 
 class Settings:
     def __init__(self):
@@ -11,6 +16,7 @@ class Settings:
         self.time_window_density = 5
         self.connected_idx = None
         self.debug_mode = False # コントローラ入力の全dumpなど
+        self.playmode = playmode.iidx_sp
         #self.log_offset = '0'
         self.table_url = ['https://stellabms.xyz/sl/table.html', 'https://mirai-yokohama.sakura.ne.jp/bms/insane_bms.html']
 
@@ -24,6 +30,7 @@ class Settings:
         print(f"size_release_hist={self.size_release_hist}")
         print(f"time_window_density={self.time_window_density}")
         print(f"connected_idx={self.connected_idx}")
+        print(f"playmode={self.playmode.name}")
         print(f"debug_mode={self.debug_mode}")
 
     def load(self):
