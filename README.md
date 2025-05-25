@@ -7,7 +7,7 @@ A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is eas
 ![image](https://github.com/user-attachments/assets/ab1d777a-b197-451d-9431-5707fe389c2f)
 
 # Usage (ツールの利用方法)
-1. Releaseページの一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
+1. [Releaseページ](https://github.com/dj-kata/otoge_input_viewer/releases)の一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
 2. otoge_input_viewer.exeを実行する。
 3. 検出するコントローラを変更したい場合はchangeボタンを押す
 4. OBSにキー入力状況を表示したい場合は、同梱の```html/iidx_1p.html```または```html/iidx_2p.html```をOBSにドラッグ&ドロップする。作成されたブラウザソースについて、幅300，高さ200とすると余白もちょうどよくなります。
