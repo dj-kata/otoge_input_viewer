@@ -327,12 +327,16 @@ class DispButtons:
         """
         if str(self.settings.ln_threshold) != val['ln_threshold']:
             try:
-                self.settings.ln_threshold = int(val['ln_threshold'])
+                val = int(val['ln_threshold'])
+                if val > 0:
+                    self.settings.ln_threshold = val
             except Exception:
                 pass
         if str(self.settings.size_release_hist) != val['size_release_hist']:
             try:
-                self.settings.size_release_hist = int(val['size_release_hist'])
+                val = int(val['size_release_hist'])
+                if val > 0:
+                    self.settings.size_release_hist = val
             except Exception:
                 pass
 
