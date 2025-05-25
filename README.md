@@ -57,7 +57,12 @@ rgba(0,0,0,0.65)の4つ目が不透明度で、この値が大きいほど暗く
   - ボタンや皿部分への画像の追加
   - 押下時の光り方のカスタマイズ
 
-# 連絡先
+# その他
 不具合報告などについては、
 本レポジトリのIssuesまたは[作者のTwitter](https://x.com/cold_planet_)へお願いします。
 
+配信へのクレジット表記などは別に必須ではないですが、書いてもらえると喜びます。
+```
+Otoge Input Viewer
+https://github.com/dj-kata/otoge_input_viewer
+```
