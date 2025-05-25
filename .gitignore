@@ -1,4 +1,5 @@
 build/*
+log/*
 __pycache__/*
 otoge_input_viewer/*
 dist/*
