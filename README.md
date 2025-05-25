@@ -1,7 +1,10 @@
 # otoge input viewer
-フェニワンなどの入力状況可視化及びリリース速度や入力密度の表示。OBSへの設定が楽な作りを目指す。
-
+IIDXコントローラ(PHOENIX WANなど)の入力可視化、リリース速度や入力密度の表示が行えるソフトウェアです。
+OBSへの設定をとても楽に行うことができます。
 A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is easy to configure into OBS.
+
+![image](https://github.com/user-attachments/assets/f520ce3d-441e-4653-9821-1d8e278927fb)
+![image](https://github.com/user-attachments/assets/ab1d777a-b197-451d-9431-5707fe389c2f)
 
 # Usage (ツールの利用方法)
 1. Releaseページの一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
@@ -41,6 +44,8 @@ rgba(0,0,0,0.65)の4つ目が不透明度で、この値が大きいほど暗く
     background-image: linear-gradient(rgba(0,0,0,0.65),rgba(0,0,0,0.65)),url(bg.png);
 }
 ```
+
+![image](https://github.com/user-attachments/assets/650bcaa2-d5c4-4cc4-97e6-94535b6ba22a)
 
 # 今後の予定
 以下機能を追加するかもしれません。
