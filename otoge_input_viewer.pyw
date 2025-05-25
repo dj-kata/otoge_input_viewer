@@ -10,12 +10,36 @@ import traceback
 from settings import Settings
 from enum import Enum
 import copy
+import subprocess
+import logging, logging.handlers
+from bs4 import BeautifulSoup
+import requests
 
 FONT = ('Meiryo', 12)
 FONTs = ('Meiryo', 8)
 
 par_text = partial(sg.Text, font=FONT)
 sg.theme('SystemDefault')
+
+os.makedirs('log', exist_ok=True)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+hdl = logging.handlers.RotatingFileHandler(
+    f'log/{os.path.basename(__file__).split(".")[0]}.log',
+    encoding='utf-8',
+    maxBytes=1024*1024*2,
+    backupCount=1,
+)
+hdl.setLevel(logging.DEBUG)
+hdl_formatter = logging.Formatter('%(asctime)s %(filename)s:%(lineno)5d %(funcName)s() [%(levelname)s] %(message)s')
+hdl.setFormatter(hdl_formatter)
+logger.addHandler(hdl)
+
+try:
+    with open('version.txt', 'r') as f:
+        SWVER = f.readline().strip()
+except Exception:
+    SWVER = "v?.?.?"
 
 class DispButtons:
     def __init__(self):
@@ -32,6 +56,22 @@ class DispButtons:
         self.release = 0.0
         self.density = 0.0
         self.density_hist = []
+
+    def get_latest_version(self):
+        """GitHubから最新版のバージョンを取得する。
+
+        Returns:
+            str: バージョン番号
+        """
+        ret = None
+        url = 'https://github.com/dj-kata/otoge_input_viewer/tags'
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text,features="html.parser")
+        for tag in soup.find_all('a'):
+            if 'releases/tag/v.' in tag['href']:
+                ret = tag['href'].split('/')[-1]
+                break # 1番上が最新なので即break
+        return ret
 
     def update_string(self, target, value):
         """GUIの文字を変更する。main画面でのみ通したいので入口を共通化している。
@@ -81,7 +121,7 @@ class DispButtons:
         """メイン画面の準備
         """
         menuitems = [
-            ['File', ['settings', 'exit']],
+            ['File', ['settings', 'check for updates', 'exit']],
         ]
         layout = [
             [sg.Menubar(menuitems, key='menu')],
@@ -130,7 +170,7 @@ class DispButtons:
         while True:
             cur_ts = time.perf_counter()
             if self.stop_thread:
-                print('stop write thread')
+                logger.debug('stop write thread')
                 break
             # densityを計算
             if cur_ts - last_density_ts >= 1.0:
@@ -192,7 +232,7 @@ class DispButtons:
         pre_scr_val = None
         pre_scr_is_up = False
 
-        print('detect thread started')
+        logger.debug('detect thread started')
 
         # 起動時のコントローラ接続
         cnt = pygame.joystick.get_count()
@@ -208,16 +248,16 @@ class DispButtons:
 
         while True:
             if self.stop_thread:
-                print('stop detect thread')
+                logger.debug('stop detect thread')
                 break
             try:
                 for event in pygame.event.get():
                     #print(event)
                     if (event.type == pygame.JOYDEVICEADDED):
                         tmp = pygame.joystick.Joystick(event.device_index)
-                        print(event.device_index, tmp.get_name())
+                        logger.debug(f'device_index={event.device_index}, name={tmp.get_name()} added')
                     elif (event.type == pygame.JOYDEVICEREMOVED):
-                        print(f'コントローラ{event.instance_id} 接続解除')
+                        logger.debug(f'instance_id={event.instance_id} removed')
                     elif event.type == pygame.JOYBUTTONDOWN:
                         if event.joy == self.settings.connected_idx:
                             if event.button >= 14:
@@ -256,19 +296,19 @@ class DispButtons:
                         pre_scr_val = event.value
             #time.sleep(0.001)
             except Exception:
-                print(traceback.format_exc())
+                logger.debug(traceback.format_exc())
                 self.window['state'].update(f'NG')
                 self.window['state'].update(text_color='#ff0000')
                 break
 
         #joystick.quit()
         #pygame.quit()
-        print('detect thread end')
+        logger.debug('detect thread end')
 
     def change_device(self):
         """監視対象となるデバイスを変更する。外のコントローラがある場合はidxを1進める。
         """
-        print('change device')
+        logger.debug('change device')
         cnt = pygame.joystick.get_count()
         if cnt > 0:
             self.settings.connected_idx = (self.settings.connected_idx + 1) % cnt
@@ -277,7 +317,7 @@ class DispButtons:
             self.joystick.init()
             self.update_string('device1', f'{self.settings.connected_idx}.{self.joystick.get_name()}')
         else:
-            print('error! device not found')
+            logger.debug('error! device not found')
 
     def update_settings(self, val):
         """設定画面の値を反映する。設定画面を閉じる時に実行する。
@@ -295,14 +335,9 @@ class DispButtons:
                 self.settings.size_release_hist = int(val['size_release_hist'])
             except Exception:
                 pass
-        if str(self.settings.size_density_hist) != val['size_density_hist']:
-            try:
-                self.settings.size_density_hist = int(val['size_density_hist'])
-            except Exception:
-                pass
 
     def main(self):
-        """メイン関数
+        """メイン関数兼GUI周りを扱うスレッド。
         """
         #pygame.init()
         self.stop_thread = False
@@ -311,12 +346,13 @@ class DispButtons:
         self.th_detect.start()
         self.th_write = threading.Thread(target=self.thread_write, daemon=True)
         self.th_write.start()
+        self.window.write_event_value('check for updates', ' ')
         while True:
             self.settings.lx = self.window.current_location()[0]
             self.settings.ly = self.window.current_location()[1]
             self.settings.connected_idx = self.settings.connected_idx
             ev, val = self.window.read()
-            print(ev)
+            #print(ev)
             if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
                 self.stop_thread = True
                 #self.th_detect.join()
@@ -328,7 +364,22 @@ class DispButtons:
                 self.gui_settings()
             elif ev == 'btn_change':
                 self.change_device()
-        print('main thread end')
+            elif ev == 'check for updates':
+                ver = self.get_latest_version()
+                if (ver != SWVER) and (ver is not None):
+                    logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
+                    ans = sg.popup_yes_no(f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。', icon=self.ico_path('icon.ico'))
+                    if ans == "Yes":
+                        #self.control_obs_sources('quit')
+                        if os.path.exists('update.exe'):
+                            logger.info('アップデート確認のため終了します')
+                            res = subprocess.Popen('update.exe')
+                            break
+                        else:
+                            sg.popup_error('update.exeがありません', icon=self.ico)
+                else:
+                    logger.debug(f'お使いのバージョンは最新です({SWVER})')
+        logger.debug('main thread end')
 
 app = DispButtons()
 app.main()
