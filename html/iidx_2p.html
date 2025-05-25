@@ -8,14 +8,15 @@
         <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&display=swap" rel="stylesheet">
         <style>
             body { 
-            
+            width: 600px;
+            height: 600px;
             background-color: rgba(0, 0, 0, 0.99);
             margin: 0px;
-            padding: 80px;
+            padding: 20px;
             overflow: hidden;
             font-family: 'RocknRoll One', sans-serif;
             color:#aaddff;   
-            font-size: 4px;
+            font-size:2px;
             color: #fff;
             text-shadow: 6px 6px 0 #000,
                          -2px 2px 0 #000,
@@ -30,10 +31,10 @@
                 height: 30px;
             }
             table#disp td{
-                font-size: 10px;
+                font-size: 4px;
                 color: #FFa;
-                width: 100px;
-                height: 150px;
+                width: 20px;
+                height: 37px;
                 line-height: 1px;
             }
             td.btn{
@@ -41,9 +42,41 @@
                 border: 2px solid #cccccc;
             }
             table.info{
-                text-align: center;
-                font-size: 40px;
-                padding-left: 130px;
+                text-align: left;
+                font-size: 16px;
+                padding-left: 13px;
+            }
+            .scr-top{
+              background: #000000;
+              border: 2px #cccccc solid;
+              border-radius: 40px 40px 0% 0%;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 80px;
+              height: 40px;
+              line-height: 3;
+              margin: 4px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
+            }
+            .scr-bottom {
+              border: 2px #cccccc solid;
+              background: #000000;
+              border-radius: 0% 0% 40px 40px;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 80px;
+              height: 40px;
+              line-height: 3;
+              margin: 4px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
             }
         </style>
     <body>
@@ -68,8 +101,12 @@
                 var pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
                 var not_pushed = "0 0 10px #fff"
                 var btn = [-1];
+                var scr = [-1];
                 for (let i=1; i<15; i++){
                     btn.push($(xml).find('Items btn'+i).text())
+                }
+                for (let i=1; i<5; i++){
+                    scr.push($(xml).find('Items scr'+i).text())
                 }
 
                 for (let i=1; i<15; i++){
@@ -84,7 +121,20 @@
                         $('#btn'+i).css('background', '#000000')
                     }
                 }
-                //$('#score tbody').html(out);
+                if (scr[2] == "1"){
+                    $('.scr-top').css('box-shadow', pushed)
+                    $('.scr-top').css('background', '#aaddff')
+                }else if (scr[2] == "0"){
+                    $('.scr-top').css('box-shadow', 'none')
+                    $('.scr-top').css('background', '#000000')
+                }
+                if (scr[1] == "1"){
+                    $('.scr-bottom').css('box-shadow', pushed)
+                    $('.scr-bottom').css('background', '#aaddff')
+                }else if (scr[1] == "0"){
+                    $('.scr-bottom').css('box-shadow', 'none')
+                    $('.scr-bottom').css('background', '#000000')
+                }
                 if (release != ""){
                     $('release').html(release);
                 }
@@ -115,11 +165,12 @@
             <td></td>
             <td id="btn6" class="btn"></td>
             <td></td>
+            <td></td>
+            <td><div class="scr-top"></div></td>
         </tr>
     </table>
-    <br><br><br>
     <table id="space">
-        <tr style="padding:100px"></tr>
+        <tr style="padding:50px"><td></td></tr>
     </table>
     <table id="disp">
         <tr>
@@ -130,6 +181,8 @@
             <td id="btn5" class="btn"></td>
             <td></td>
             <td id="btn7" class="btn"></td>
+            <td></td>
+            <td><div class="scr-bottom"></div></td>
         </tr>
     </table>
     <table class="info">

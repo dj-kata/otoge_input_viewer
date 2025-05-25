@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>hoge</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&display=swap" rel="stylesheet">
+        <style>
+            body { 
+            width: 600px;
+            height: 600px;
+            background-color: rgba(0, 0, 0, 0.99);
+            margin: 0px;
+            padding: 20px;
+            overflow: hidden;
+            font-family: 'RocknRoll One', sans-serif;
+            color:#aaddff;   
+            font-size:2px;
+            color: #fff;
+            text-shadow: 6px 6px 0 #000,
+                         -2px 2px 0 #000,
+                         2px -2px 0 #000,
+                         -2px -2px 0 #000;
+            }
+            :root{
+                --num: 20;
+                --skip-no-update: 0; /* 1:更新のない行を飛ばす */
+            }
+            tr :nth-child(2){
+                height: 30px;
+            }
+            table#disp td{
+                font-size: 4px;
+                color: #FFa;
+                width: 20px;
+                height: 37px;
+                line-height: 1px;
+            }
+            td.btn{
+                box-shadow: none;
+                border: 2px solid #cccccc;
+            }
+            table.info{
+                text-align: left;
+                font-size: 16px;
+                padding-left: 13px;
+            }
+            .scr-top{
+              background: #000000;
+              border: 2px #cccccc solid;
+              border-radius: 40px 40px 0% 0%;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 80px;
+              height: 40px;
+              line-height: 3;
+              margin: 4px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
+            }
+            .scr-bottom {
+              border: 2px #cccccc solid;
+              background: #000000;
+              border-radius: 0% 0% 40px 40px;
+              box-shadow: 0 0 0 2px #cccccc;
+              color: #0000aa;
+              display: inline-block;
+              width: 80px;
+              height: 40px;
+              line-height: 3;
+              margin: 4px;
+              padding: 0;
+              text-align: center;
+              text-decoration: none;
+              box-shadow: none;
+            }
+        </style>
+    <body>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script>
+        function loadXml() {
+            var getxml = $.ajax({
+                url: '../buttons.xml',
+                type: 'GET',
+                dataType: 'xml',
+                cache: false
+            });
+            var release = 0.0;
+            var density = 0.0;
+            getxml.done(function(xml){
+                // xmlデータからほしいデータをfindで探し処理
+                var out = "";
+                var scr_up = $(xml).find('Items scr_up').text();
+                var scr_down = $(xml).find('Items scr_down').text();
+                release = $(xml).find('Items release').text();
+                density = $(xml).find('Items density').text();
+                var pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
+                var not_pushed = "0 0 10px #fff"
+                var btn = [-1];
+                var scr = [-1];
+                for (let i=1; i<15; i++){
+                    btn.push($(xml).find('Items btn'+i).text())
+                }
+                for (let i=1; i<5; i++){
+                    scr.push($(xml).find('Items scr'+i).text())
+                }
+
+                for (let i=1; i<15; i++){
+                    if (btn[i] == ""){
+                        // 何もしない
+                    }
+                    else if (btn[i] == "1"){
+                        $('#btn'+i).css('box-shadow', pushed)
+                        $('#btn'+i).css('background', '#aaddff')
+                    }else{
+                        $('#btn'+i).css('box-shadow', 'none')
+                        $('#btn'+i).css('background', '#000000')
+                    }
+                }
+                if (scr[1] == "1"){
+                    $('.scr-top').css('box-shadow', pushed)
+                    $('.scr-top').css('background', '#aaddff')
+                }else if (scr[1] == "0"){
+                    $('.scr-top').css('box-shadow', 'none')
+                    $('.scr-top').css('background', '#000000')
+                }
+                if (scr[2] == "1"){
+                    $('.scr-bottom').css('box-shadow', pushed)
+                    $('.scr-bottom').css('background', '#aaddff')
+                }else if (scr[2] == "0"){
+                    $('.scr-bottom').css('box-shadow', 'none')
+                    $('.scr-bottom').css('background', '#000000')
+                }
+                if (release != ""){
+                    $('release').html(release);
+                }
+                if (density != ""){
+                    $('density').html(density);
+                }
+
+            });
+            getxml.fail(function(err) {
+                // alert('failed');
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var roopTimer = setInterval(loadXml, 30);
+        });
+
+</script>
+</head>
+<body>
+  <div id="all">
+    <table id="disp">
+        <tr>
+            <td><div class="scr-top"></div></td>
+            <td></td>
+            <td></td>
+            <td id="btn2" class="btn"></td>
+            <td></td>
+            <td id="btn4" class="btn"></td>
+            <td></td>
+            <td id="btn6" class="btn"></td>
+            <td></td>
+        </tr>
+    </table>
+    <table id="space">
+        <tr style="padding:50px"><td></td></tr>
+    </table>
+    <table id="disp">
+        <tr>
+            <td><div class="scr-bottom"></div></td>
+            <td></td>
+            <td id="btn1" class="btn"></td>
+            <td></td>
+            <td id="btn3" class="btn"></td>
+            <td></td>
+            <td id="btn5" class="btn"></td>
+            <td></td>
+            <td id="btn7" class="btn"></td>
+        </tr>
+    </table>
+    <table class="info">
+        <tr><td>release:&nbsp;</td><td><release></release> ms</td></tr>
+        <tr><td>density:&nbsp;</td><td><density></density> n/s</td></tr>
+    </table>
+  </div>
+</body>
+</html>
