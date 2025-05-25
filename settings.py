@@ -23,6 +23,7 @@ class Settings:
         print(f"ly={self.ly}")
         print(f"ln_threshold={self.ln_threshold}")
         print(f"size_release_hist={self.size_release_hist}")
+        print(f"time_window_density={self.time_window_density}")
         print(f"connected_idx={self.connected_idx}")
 
     def load(self):
