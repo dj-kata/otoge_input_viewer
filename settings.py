@@ -10,8 +10,7 @@ class Settings:
         self.size_release_hist = 100
         self.time_window_density = 5
         self.connected_idx = None
-        self.tweet_on_exit = False
-        self.save_on_capture = True
+        self.debug_mode = False # コントローラ入力の全dumpなど
         #self.log_offset = '0'
         self.table_url = ['https://stellabms.xyz/sl/table.html', 'https://mirai-yokohama.sakura.ne.jp/bms/insane_bms.html']
 
@@ -25,6 +24,7 @@ class Settings:
         print(f"size_release_hist={self.size_release_hist}")
         print(f"time_window_density={self.time_window_density}")
         print(f"connected_idx={self.connected_idx}")
+        print(f"debug_mode={self.debug_mode}")
 
     def load(self):
         try:

@@ -56,6 +56,7 @@ class GUI:
             [par_text('History size for release(default=100)',
                       tooltip='Set the number of notes for calculating release avg.\nリリース速度計算のために何ノーツを用いるか。\ndefault=100'),
              sg.Input(settings.size_release_hist,key='size_release_hist', size=(6,1))],
+            [sg.Checkbox('debug mode(default=off)', default=settings.debug_mode, key='debug_mode', font=FONT)]
         ]
         # modal=Trueによって元のウィンドウを操作できなくする
         self.window_settings = sg.Window('Settings - Otoge input viewer for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(settings.lx,settings.ly), modal=True)

@@ -212,7 +212,8 @@ class DispButtons:
                 break
             try:
                 for event in pygame.event.get():
-                    #print(event)
+                    if self.settings.debug_mode:
+                        logger.debug(event)
                     if (event.type == pygame.JOYDEVICEADDED):
                         tmp = pygame.joystick.Joystick(event.device_index)
                         logger.debug(f'device_index={event.device_index}, name={tmp.get_name()} added')
@@ -300,6 +301,7 @@ class DispButtons:
                     self.settings.size_release_hist = val
             except Exception:
                 pass
+        self.settings.debug_mode = settings['debug_mode']
 
     def main(self):
         """メイン関数兼GUI周りを扱うスレッド。
