@@ -176,7 +176,7 @@ class DispButtons:
             for i in range(14):
                 f.write(f'    <btn{i+1}>{self.state[i]}</btn{i+1}>\n')
             for i in range(4):
-                f.write(f'    <scr{i+1}>{self.scratch[i]}</btn{i+1}>\n')
+                f.write(f'    <scr{i+1}>{self.scratch[i]}</scr{i+1}>\n')
             f.write("</Items>\n")
 
     def thread_detect(self):
