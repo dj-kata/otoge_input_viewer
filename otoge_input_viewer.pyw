@@ -14,6 +14,7 @@ import subprocess
 import logging, logging.handlers
 from bs4 import BeautifulSoup
 import requests
+from gui import GUI
 
 FONT = ('Meiryo', 12)
 FONTs = ('Meiryo', 8)
@@ -46,8 +47,10 @@ class DispButtons:
         """コンストラクタ
         """
         self.settings = Settings()
-        self.window = None
-        self.window_settings = None
+        self.gui = GUI()
+        self.ico=self.ico_path('icon.ico')
+        self.gui.window = None
+        self.gui.window_settings = None
         self.joystick = None
         self.is_device_valid = False # コントローラを検出できている場合にTrue
         self.stop_thread = False # 強制停止用
@@ -83,10 +86,10 @@ class DispButtons:
         Returns:
             _type_: _description_
         """
-        if self.window is None:
+        if self.gui.window is None:
             return False
         try:
-            self.window[target].update(value)
+            self.gui.window[target].update(value)
         except Exception:
             print(traceback.format_exc())
             pass
@@ -95,8 +98,8 @@ class DispButtons:
         """コントローラの検出状態(OK/NG)を出力する
         """
         try:
-            self.window['state'].update(f'OK')
-            self.window['state'].update(text_color='#0000ff')
+            self.gui.window['state'].update(f'OK')
+            self.gui.window['state'].update(text_color='#0000ff')
         except Exception:
             print(traceback.format_exc())
             pass
@@ -116,49 +119,6 @@ class DispButtons:
         except Exception:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
-
-    def gui_main(self):
-        """メイン画面の準備
-        """
-        menuitems = [
-            ['File', ['settings', 'check for updates', 'exit']],
-        ]
-        layout = [
-            [sg.Menubar(menuitems, key='menu')],
-            [par_text('release: ') ,par_text('', key='release'), par_text('[ms]')],
-            [par_text('density: ') ,par_text('', key='density'), par_text('[notes/s]')],
-            [par_text('')],
-            [par_text('state_btn: '), par_text(str(self.state), key='state_btn')],
-            [par_text('state_scr: '), par_text(str(self.scratch), key='state_scr')],
-            [par_text('device1:'), par_text('', key='device1'), sg.Button('change', key='btn_change')]
-        ]
-        if self.joystick is not None:
-            self.update_string('device1', f'{self.settings.connected_idx}.{self.joystick.get_name()}')
-        self.window = sg.Window('Otoge input viewer for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(self.settings.lx,self.settings.ly))
-
-    def gui_settings(self):
-        """設定画面の準備
-        """
-        # mainスレッド以外への遷移はすぐにやっておく
-        layout = [
-            [par_text('threshold for LN(default=225):',
-                      tooltip='Set the time for determining long notes.\n何ms以上をCNとみなすかを設定。\ndefault=225'),
-                      sg.Input(self.settings.ln_threshold,key='ln_threshold', size=(6,1))],
-            [par_text('History size for release(default=100)',
-                      tooltip='Set the number of notes for calculating release avg.\nリリース速度計算のために何ノーツを用いるか。\ndefault=100'),
-             sg.Input(self.settings.size_release_hist,key='size_release_hist', size=(6,1))],
-            [par_text('History size for density(default=100)',
-                      tooltip='Set the number of notes for calculating chart density.\nノーツ密度計算のために何ノーツを用いるか。\ndefault=100'),
-             sg.Input(self.settings.size_density_hist, key='size_density_hist', size=(6,1))],
-        ]
-        # modal=Trueによって元のウィンドウを操作できなくする
-        self.window_settings = sg.Window('Settings - Otoge input viewer for OBS', layout, grab_anywhere=True,return_keyboard_events=True,resizable=False,finalize=True,enable_close_attempted_event=True,icon=self.ico_path('icon.ico'),location=(self.settings.lx,self.settings.ly), modal=True)
-        while True:
-            ev, val = self.window_settings.read()
-            if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
-                self.update_settings(val)
-                self.window_settings.close()
-                break
 
     def thread_write(self):
         """メンバ変数をxml出力するためのスレッド。皿や密度などの計算を正確に行うために別スレッド化する。
@@ -243,7 +203,7 @@ class DispButtons:
             self.settings.connected_idx = min(self.settings.connected_idx, cnt-1)
             self.settings.connected_idx = self.settings.connected_idx
             self.joystick = pygame.joystick.Joystick(self.settings.connected_idx)
-            self.window['device1'].update(f'{self.settings.connected_idx}.{self.joystick.get_name()}')
+            self.gui.window['device1'].update(f'{self.settings.connected_idx}.{self.joystick.get_name()}')
             self.joystick.init()
 
         while True:
@@ -282,13 +242,13 @@ class DispButtons:
                     elif event.type == pygame.JOYAXISMOTION:
                         if pre_scr_val is not None:
                             if event.value > pre_scr_val:
-                                self.window['state_scr'].update('up')
+                                self.gui.window['state_scr'].update('up')
                                 if not pre_scr_is_up:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[0] = 1
                                 pre_scr_is_up = True
                             elif event.value < pre_scr_val:
-                                self.window['state_scr'].update('down')
+                                self.gui.window['state_scr'].update('down')
                                 if pre_scr_is_up:
                                     self.density_hist.append(time.perf_counter())
                                 self.scratch[1] = 1
@@ -297,8 +257,8 @@ class DispButtons:
             #time.sleep(0.001)
             except Exception:
                 logger.debug(traceback.format_exc())
-                self.window['state'].update(f'NG')
-                self.window['state'].update(text_color='#ff0000')
+                self.gui.window['state'].update(f'NG')
+                self.gui.window['state'].update(text_color='#ff0000')
                 break
 
         #joystick.quit()
@@ -313,26 +273,27 @@ class DispButtons:
         if cnt > 0:
             self.settings.connected_idx = (self.settings.connected_idx + 1) % cnt
             self.joystick = pygame.joystick.Joystick(self.settings.connected_idx)
-            self.window['device1'].update(f'{self.settings.connected_idx}.{self.joystick.get_name()}')
+            self.gui.window['device1'].update(f'{self.settings.connected_idx}.{self.joystick.get_name()}')
             self.joystick.init()
             self.update_string('device1', f'{self.settings.connected_idx}.{self.joystick.get_name()}')
         else:
             logger.debug('error! device not found')
 
-    def update_settings(self, val):
+    def update_settings(self, settings):
         """設定画面の値を反映する。設定画面を閉じる時に実行する。
 
         Args:
             val (dict): sg.windowのevent
         """
-        if str(self.settings.ln_threshold) != val['ln_threshold']:
+        logger.debug(settings)
+        if str(self.settings.ln_threshold) != settings['ln_threshold']:
             try:
                 val = int(val['ln_threshold'])
                 if val > 0:
                     self.settings.ln_threshold = val
             except Exception:
                 pass
-        if str(self.settings.size_release_hist) != val['size_release_hist']:
+        if str(self.settings.size_release_hist) != settings['size_release_hist']:
             try:
                 val = int(val['size_release_hist'])
                 if val > 0:
@@ -345,17 +306,17 @@ class DispButtons:
         """
         #pygame.init()
         self.stop_thread = False
-        self.gui_main()
+        self.gui.gui_main(self.settings)
         self.th_detect = threading.Thread(target=self.thread_detect, daemon=True)
         self.th_detect.start()
         self.th_write = threading.Thread(target=self.thread_write, daemon=True)
         self.th_write.start()
-        self.window.write_event_value('check for updates', ' ')
+        self.gui.window.write_event_value('check for updates on start', ' ')
         while True:
-            self.settings.lx = self.window.current_location()[0]
-            self.settings.ly = self.window.current_location()[1]
+            self.settings.lx = self.gui.window.current_location()[0]
+            self.settings.ly = self.gui.window.current_location()[1]
             self.settings.connected_idx = self.settings.connected_idx
-            ev, val = self.window.read()
+            ev, val = self.gui.window.read()
             #print(ev)
             if ev in (sg.WIN_CLOSED, 'Escape:27', '-WINDOW CLOSE ATTEMPTED-', 'exit'):
                 self.stop_thread = True
@@ -365,14 +326,15 @@ class DispButtons:
                 self.settings.disp()
                 break
             elif ev == 'settings':
-                self.gui_settings()
+                settings = self.gui.gui_settings(self.settings)
+                self.update_settings(settings)
             elif ev == 'btn_change':
                 self.change_device()
-            elif ev == 'check for updates':
+            elif ev in ('check for updates', 'check for updates on start'):
                 ver = self.get_latest_version()
                 if (ver != SWVER) and (ver is not None):
                     logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
-                    ans = sg.popup_yes_no(f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。', icon=self.ico_path('icon.ico'))
+                    ans = sg.popup_yes_no(f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。', icon=self.ico)
                     if ans == "Yes":
                         #self.control_obs_sources('quit')
                         if os.path.exists('update.exe'):
@@ -383,6 +345,8 @@ class DispButtons:
                             sg.popup_error('update.exeがありません', icon=self.ico)
                 else:
                     logger.debug(f'お使いのバージョンは最新です({SWVER})')
+                    if ev == 'check for updates':
+                        sg.popup_ok(f'Newest version is used({SWVER})', icon=self.ico)
         logger.debug('main thread end')
 
 app = DispButtons()
