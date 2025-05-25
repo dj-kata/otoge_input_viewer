@@ -8,7 +8,6 @@ class Settings:
         self.ly = 0
         self.ln_threshold = 225
         self.size_release_hist = 100
-        #self.size_density_hist = 100
         self.time_window_density = 5
         self.connected_idx = None
         self.tweet_on_exit = False
@@ -24,7 +23,6 @@ class Settings:
         print(f"ly={self.ly}")
         print(f"ln_threshold={self.ln_threshold}")
         print(f"size_release_hist={self.size_release_hist}")
-        #print(f"size_density_hist={self.size_density_hist}")
         print(f"connected_idx={self.connected_idx}")
 
     def load(self):
