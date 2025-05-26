@@ -1,7 +1,11 @@
 # otoge input viewer
 IIDXコントローラ(PHOENIX WANなど)の入力可視化、リリース速度や入力密度の表示が行えるソフトウェアです。
-OBSへの設定をとても楽に行うことができます。
+OBSへの設定をとても楽に行うことができます。  
+らぐ様の[打鍵ディスプレイツール](https://rag-oji.com/dakendisplay/)の影響を多大に受けていますが、
+IIDX以外のコントローラへの対応も考えており、立ち位置としては別物であるつもりです。
+
 A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is easy to configure into OBS.
+This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/).
 
 ![image](https://github.com/user-attachments/assets/f520ce3d-441e-4653-9821-1d8e278927fb)
 ![image](https://github.com/user-attachments/assets/ab1d777a-b197-451d-9431-5707fe389c2f)
@@ -27,6 +31,7 @@ A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is eas
 
 ## デザインのカスタマイズ
 現状では、以下のような背景画像の設定のみ行うことができます。
+![image](https://github.com/user-attachments/assets/ab1d777a-b197-451d-9431-5707fe389c2f)
 
 以下の手順で設定できます。
 1. ```html```フォルダ内に背景画像を置く。(ここでは、ファイル名を```bg.png```とします。)
