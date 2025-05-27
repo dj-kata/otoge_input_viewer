@@ -260,25 +260,13 @@ class JoystickWebSocketServer:
         finally:
             self.clients.remove(websocket)
 
-    #async def send_joystick_events(self):
-    #    while self.running:
-    #        if not self.event_queue.empty():
-    #            event = self.event_queue.get()
-    #            print(self.settings['aaa'], event)
-    #            message = json.dumps(event)
-    #            for client in self.clients.copy():
-    #                try:
-    #                    await client.send(message)
-    #                except:
-    #                    self.clients.remove(client)
-    #        await asyncio.sleep(0.02)
     async def send_joystick_events(self):
         while self.running:
             events = []
             # キュー内の全イベントを取得
             while not self.event_queue.empty():
                 events.append(self.event_queue.get())
-            
+
             if events:
                 message = json.dumps(events)  # 配列形式で送信
                 for client in self.clients.copy():
@@ -286,7 +274,7 @@ class JoystickWebSocketServer:
                         await client.send(message)
                     except:
                         self.clients.remove(client)
-            await asyncio.sleep(0.05)  # 送信間隔調整
+            await asyncio.sleep(0.001)  # 送信間隔調整
 
     async def main_server(self):
         async with websockets.serve(self.websocket_handler, "0.0.0.0", 8765):
