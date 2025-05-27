@@ -1,37 +1,63 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>WebSocket 受信テスト</title>
+    <title>WebSocket マルチイベント表示</title>
+    <style>
+        #eventLog {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .event-item {
+            padding: 5px;
+            margin: 3px;
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+    </style>
 </head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <script>
-    // WebSocketサーバーのアドレスを指定
-    const ws = new WebSocket('ws://localhost:8765');
+    <script>
+        const ws = new WebSocket('ws://localhost:8765')
+        const eventLog = document.getElementById('eventLog')
+        let lastUpdate = Date.now()
 
-    // 接続が開いたとき
-    ws.onopen = function() {
-      console.log('WebSocket接続が開きました');
-    };
+        ws.onmessage = event => {
+            try {
+                const events = JSON.parse(event.data)
+                
+                // 単一イベントと配列の両方に対応
+                const processedEvents = Array.isArray(events) ? events : [events];
+                processedEvents.forEach(e => {
+                  $('val').html(e.button);
+                  $('val2').html(e.state);
+                })
+            } catch (e) {
+                console.error('データ解析エラー:', e)
+            }
+        }
 
-    // メッセージを受信したとき
-    ws.onmessage = function(event) {
-      console.log('受信:', event.data);
-      $('msg').html(event.data);
-    };
+        function formatEvent(event) {
+            const date = new Date().toLocaleTimeString()
+            if (event.type === 'button') {
+                return `[${date}] ボタン ${event.button}: ${event.state}`
+            }
+            if (event.type === 'axis') {
+                return `[${date}] 軸 ${event.axis}: ${event.value.toFixed(2)}`
+            }
+            return `[${date}] 不明なイベント`
+        }
 
-    // 接続が閉じられたとき
-    ws.onclose = function() {
-      console.log('WebSocket接続が閉じられました');
-    };
-
-    // エラー発生時
-    ws.onerror = function(error) {
-      console.error('WebSocketエラー:', error);
-    };
-  </script>
+        function clearLog() {
+            eventLog.innerHTML = ''
+        }
+    </script>
 <body>
-  <h1>WebSocket 受信専用クライアント</h1>
-    <msg></msg>
+    <div id="eventLog"></div>
+
+    <val>124</val><br>
+    <val2>124</val2>
 </body>
 </html>
