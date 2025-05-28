@@ -394,6 +394,8 @@ class JoystickWebSocketServer:
     def toggle_server(self):
         if self.server_thread.is_alive():
             self.running = False
+            self.scratch_thread.join()
+            self.joystick_thread.join()
             self.control_button.config(text="サーバー起動")
             self.update_server_status_display()
         else:
@@ -405,6 +407,18 @@ class JoystickWebSocketServer:
             self.server_thread.start()
             self.control_button.config(text="サーバー停止")
             self.update_server_status_display()
+
+            self.joystick_thread = threading.Thread(
+                target=self.joystick_monitor,
+                daemon=True
+            )
+            self.joystick_thread.start()
+
+            self.scratch_thread = threading.Thread(
+                target=self.thread_scratch,
+                daemon=True
+            )
+            self.scratch_thread.start()
 
     # その他のメソッド（joystick_monitor、process_joystick_eventなど）は前回と同様
     def on_close(self):
