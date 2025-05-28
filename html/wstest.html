@@ -15,10 +15,6 @@
             color:#aaddff;   
             font-size:2px;
             color: #fff;
-            text-shadow: 2px 2px 0 #000,
-                          -2px 2px 0 #000,
-                          2px -2px 0 #000,
-                          -2px -2px 0 #000;
         }
         .background{
             height: 100%;
@@ -39,8 +35,7 @@
             border-spacing: 10px 4px;
         }
         table#disp td{
-            font-size: 4px;
-            color: #FFa;
+            color: #7fa;
             width: 24px;
             height: 37px;
             line-height: 1px;
@@ -48,6 +43,7 @@
         td.btn{
             box-shadow: none;
             border: 2px solid #cccccc;
+            font-size: 8px;
         }
         table.info{
             text-align: left;
@@ -55,6 +51,10 @@
             padding-left: 13px;
             border-spacing: 0 0;
             line-height: 2px;
+            text-shadow: 2px 2px 0 #000,
+                          -2px 2px 0 #000,
+                          2px -2px 0 #000,
+                          -2px -2px 0 #000;
         }
         .scr-top{
           background: #000000;
@@ -129,6 +129,13 @@
                         $(direction).css('box-shadow', 'none')
                         $(direction).css('background', '#000000')
                     }
+                  }else if (e.type == 'release'){
+                    $('release').html(e.value)
+                  }else if (e.type == 'release_eachkey'){
+                    var btn = e.button+1
+                    $('#btn'+btn).text(e.value)
+                  }else if (e.type == 'density'){
+                    $('density').html(e.value)
                   }
                 })
             } catch (e) {
