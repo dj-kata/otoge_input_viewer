@@ -7,3 +7,4 @@ dist/*
 *.spec
 *.zip
 *.xml
+html/websocket.css
