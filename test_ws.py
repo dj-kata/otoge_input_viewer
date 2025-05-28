@@ -40,6 +40,7 @@ class SettingsDialog(tk.Toplevel):
         self.title("設定")
         self.settings = settings
         self.result = None
+        self.grab_set() # メインウィンドウの操作禁止
         
         self.create_widgets()
         self.load_current_settings()
@@ -77,6 +78,8 @@ class SettingsDialog(tk.Toplevel):
             self.settings.port = port
             self.settings.ln_threshold = int(self.ln_threshold.get())
             self.settings.save()
+            with open('html/websocket.css', 'w', encoding='utf-8') as f:
+                f.write(':root {\n    --port:'+str(port)+';\n}')
             self.destroy()
         except ValueError as e:
             messagebox.showerror("入力エラー", str(e))
