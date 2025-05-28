@@ -1,0 +1,103 @@
+@charset "UTF-8";
+:root {
+    --port:8765;
+}
+html{
+    height: 100%;
+}
+body { 
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.99);
+    margin: 0px;
+    padding: 0px;
+    font-family: 'RocknRoll One', sans-serif;
+    color:#aaddff;   
+    font-size:2px;
+    color: #fff;
+}
+.background{
+    height: 100%;
+    background-size: 100% 100%;
+    background-position: left top;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+}
+tr :nth-child(2){
+    height: 30px;
+}
+table#disp{
+    border-spacing: 10px 4px;
+}
+table#disp td{
+    text-align: center;
+    color: #7fa;
+    width: 36px;
+    height: 54px;
+    line-height: 1px;
+    text-shadow: 1px 1px 0 #000,
+                    -1px 1px 0 #000,
+                    1px -1px 0 #000,
+                    -1px -1px 0 #000;
+}
+td.btn{
+    box-shadow: none;
+    border: 2px solid #cccccc;
+    font-size: 8px;
+}
+table.info{
+    text-align: left;
+    font-size: 16px;
+    padding-left: 13px;
+    border-spacing: 0 0;
+    line-height: 2px;
+    text-shadow: 2px 2px 0 #000,
+                    -2px 2px 0 #000,
+                    2px -2px 0 #000,
+                    -2px -2px 0 #000;
+}
+.scr-top{
+    background: #000000;
+    border: 2px #cccccc solid;
+    border-radius: 50px 50px 0% 0%;
+    box-shadow: 0 0 0 2px #cccccc;
+    color: #0000aa;
+    display: inline-block;
+    width: 100px;
+    height: 50px;
+    line-height: 3;
+    margin: 4px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: none;
+}
+.scr-down {
+    border: 2px #cccccc solid;
+    background: #000000;
+    border-radius: 0% 0% 50px 50px;
+    box-shadow: 0 0 0 2px #cccccc;
+    color: #0000aa;
+    display: inline-block;
+    width: 100px;
+    height: 50px;
+    line-height: 3;
+    margin: 4px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: none;
+}
+warning {
+    font-size: 60px;
+    color: red;
+}
+release {
+    color: #dff;
+}
+density {
+    color: #dff;
+}
+notes {
+    color: #ffeeee;
+}

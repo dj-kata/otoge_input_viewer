@@ -11,9 +11,31 @@ import os
 import json
 import time
 from collections import defaultdict
+import logging, logging.handlers
+from settings import Settings, playmode
+
+os.makedirs('log', exist_ok=True)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+hdl = logging.handlers.RotatingFileHandler(
+    f'log/{os.path.basename(__file__).split(".")[0]}.log',
+    encoding='utf-8',
+    maxBytes=1024*1024*2,
+    backupCount=1,
+)
+hdl.setLevel(logging.DEBUG)
+hdl_formatter = logging.Formatter('%(asctime)s %(filename)s:%(lineno)5d %(funcName)s() [%(levelname)s] %(message)s')
+hdl.setFormatter(hdl_formatter)
+logger.addHandler(hdl)
+
+try:
+    with open('version.txt', 'r') as f:
+        SWVER = f.readline().strip()
+except Exception:
+    SWVER = "v?.?.?"
 
 class SettingsDialog(tk.Toplevel):
-    def __init__(self, parent, settings):
+    def __init__(self, parent, settings:Settings):
         super().__init__(parent)
         self.title("設定")
         self.settings = settings
@@ -22,64 +44,44 @@ class SettingsDialog(tk.Toplevel):
         self.create_widgets()
         self.load_current_settings()
 
+        super().protocol('WM_DELETE_WINDOW', self.save)
+
     def create_widgets(self):
         frame = ttk.Frame(self, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        # AAA設定
-        ttk.Label(frame, text="変数AAA:").grid(row=0, column=0, sticky=tk.W)
-        self.aaa_entry = ttk.Entry(frame)
-        self.aaa_entry.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(frame, text="LongNotes判定しきい値(ms) (default=225):").grid(row=0, column=0, sticky=tk.W)
+        self.ln_threshold = ttk.Entry(frame)
+        self.ln_threshold.grid(row=0, column=1, padx=5, pady=5)
 
-        # ポート番号設定
         ttk.Label(frame, text="WebSocketポート:").grid(row=1, column=0, sticky=tk.W)
         self.port_entry = ttk.Entry(frame)
         self.port_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        # 自動起動チェックボックス
-        self.auto_start_var = tk.BooleanVar()
-        self.auto_start_check = ttk.Checkbutton(
-            frame,
-            text="起動時にWebSocketサーバーを自動開始",
-            variable=self.auto_start_var
-        )
-        self.auto_start_check.grid(row=2, column=0, columnspan=2, pady=5, sticky=tk.W)
-
         # ボタン
         button_frame = ttk.Frame(frame)
         button_frame.grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(button_frame, text="保存", command=self.save).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="キャンセル", command=self.destroy).pack(side=tk.LEFT)
 
     def load_current_settings(self):
-        self.aaa_entry.insert(0, str(self.settings['aaa']))
-        self.port_entry.insert(0, str(self.settings['port']))
-        self.auto_start_var.set(self.settings['auto_start'])
+        self.ln_threshold.insert(0, str(self.settings.ln_threshold))
+        self.port_entry.insert(0, str(self.settings.port))
+        #self.auto_start_var.set(self.settings['auto_start'])
 
     def save(self):
+        """設定値をファイルに保存
+        """
         try:
-            aaa = int(self.aaa_entry.get())
             port = int(self.port_entry.get())
             if not (1 <= port <= 65535):
                 raise ValueError("ポート番号が無効です")
-            
-            self.settings.update({
-                'aaa': aaa,
-                'port': port,
-                'auto_start': self.auto_start_var.get()
-            })
+            self.settings.port = port
+            self.settings.ln_threshold = int(self.ln_threshold.get())
+            self.settings.save()
             self.destroy()
         except ValueError as e:
             messagebox.showerror("入力エラー", str(e))
 
 class JoystickWebSocketServer:
-    CONFIG_FILE = "settings.json"
-    DEFAULT_SETTINGS = {
-        'aaa': 100,
-        'port': 8765,
-        'auto_start': False
-    }
-
     def __init__(self, root):
         self.root = root
         self.root.title("Joystick WebSocket Server")
@@ -93,8 +95,7 @@ class JoystickWebSocketServer:
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
-
-        self.settings = self.load_settings()
+        self.settings = Settings()
 
         self.setup_gui()
         self.init_pygame()
@@ -107,8 +108,8 @@ class JoystickWebSocketServer:
         self.root.config(menu=self.menubar)
         
         settings_menu = tk.Menu(self.menubar, tearoff=0)
-        settings_menu.add_command(label="設定変更", command=self.open_settings_dialog)
-        self.menubar.add_cascade(label="設定", menu=settings_menu)
+        settings_menu.add_command(label="config", command=self.open_settings_dialog)
+        self.menubar.add_cascade(label="file", menu=settings_menu)
 
         main_frame = ttk.Frame(self.root, padding=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -140,7 +141,7 @@ class JoystickWebSocketServer:
         # サーバー状態表示
         self.server_status = ttk.Label(
             main_frame,
-            text=f"WebSocket port: {self.settings['port']}",
+            text=f"WebSocket port: {self.settings.port}",
             font=("Meiryo UI", 10)
         )
         self.server_status.pack(pady=5)
@@ -148,7 +149,7 @@ class JoystickWebSocketServer:
         # 制御ボタン
         self.control_button = ttk.Button(
             main_frame,
-            text="サーバー起動",
+            text="reset threads",
             command=self.toggle_server
         )
         self.control_button.pack(pady=10)
@@ -196,7 +197,8 @@ class JoystickWebSocketServer:
     def open_settings_dialog(self):
         dialog = SettingsDialog(self.root, self.settings)
         self.root.wait_window(dialog)
-        self.save_settings()
+        self.settings.load()
+        self.settings.disp()
         self.update_server_status_display()
 
     def change_joystick(self):
@@ -246,6 +248,7 @@ class JoystickWebSocketServer:
         """
         state_last = [0]*4
         time_last_active = [0]*4 # 最後に命令を受信した時刻
+        print('scratch thread start')
         while self.running:
             if not self.scratch_queue.empty(): # スクラッチ用キューがある場合
                 tmp = self.scratch_queue.get()
@@ -272,17 +275,14 @@ class JoystickWebSocketServer:
     def thread_calc(self):
         """release及びdensityの計算用スレッド。
         """
-        THRESHOLD_LONG = 225 # LN判定しきい値
-        RELEASE_HIST_SIZE = 200 # 何ノーツを用いるか
-        RELEASE_HIST_KEY_SIZE = 50 # 何ノーツを用いるか
         SEND_INTERVAL  = 1.0 # 送信周期
-        TIME_WINDOW_DENSITY=2.5 # 密度用
         time_last_sent = 0 # 最後に送信した時間
         time_last_active = defaultdict(int) # 各鍵盤で最後にpushされた時刻を記録。
         list_allkeys = [] # 全鍵盤用のログ保存リスト
         list_eachkey = defaultdict(list)
         list_density = []
         list_last_scratch = defaultdict(str) # 最後にどの向きだったか, axisごとに用意
+        print('calc thread start')
         while self.running:
             cur_time = time.perf_counter()
             if not self.calc_queue.empty(): # non-blocking 
@@ -294,7 +294,7 @@ class JoystickWebSocketServer:
                         list_density.append(cur_time) # LNは関係なく密度計算には使う
                     else:
                         tmp_release = cur_time - time_last_active[key]
-                        if tmp_release < THRESHOLD_LONG/1000:
+                        if tmp_release < self.settings.ln_threshold/1000:
                             list_allkeys.append(tmp_release)
                             list_eachkey[key].append(tmp_release)
                 elif tmp['type'] == 'axis': # スクラッチ
@@ -303,7 +303,7 @@ class JoystickWebSocketServer:
                     list_last_scratch[tmp['axis']] = tmp['direction']
             elif cur_time - time_last_sent > SEND_INTERVAL: # 各種出力
                 if len(list_allkeys) > 0:
-                    list_allkeys = list_allkeys[-RELEASE_HIST_SIZE:]
+                    list_allkeys = list_allkeys[-self.settings.size_release_hist:]
                     release = sum(list_allkeys) / len(list_allkeys)
                     event_data = {
                         'type': 'release',
@@ -312,7 +312,7 @@ class JoystickWebSocketServer:
                     self.event_queue.put(event_data)
                     time_last_sent = cur_time
                 for k in list_eachkey.keys():
-                    list_eachkey[k] = list_eachkey[k][-RELEASE_HIST_KEY_SIZE:]
+                    list_eachkey[k] = list_eachkey[k][-self.settings.size_release_key_hist:]
                     release = sum(list_eachkey[k]) / len(list_eachkey[k])
                     event_data = {
                         'type': 'release_eachkey',
@@ -321,13 +321,13 @@ class JoystickWebSocketServer:
                     }
                     self.event_queue.put(event_data)
                 if len(list_density) > 0: # 密度の出力
-                    if cur_time - list_density[-1] > TIME_WINDOW_DENSITY:
+                    if cur_time - list_density[-1] > self.settings.time_window_density:
                         list_density = []
                     for i in range(len(list_density)):
-                        if cur_time - list_density[i] <= TIME_WINDOW_DENSITY:
+                        if cur_time - list_density[i] <= self.settings.time_window_density:
                             break
                     list_density = list_density[i:] # 直近5秒以内の範囲だけに整形
-                    density = len(list_density) / TIME_WINDOW_DENSITY
+                    density = len(list_density) / self.settings.time_window_density
                     event_data = {
                         'type': 'density',
                         'value': f"{density:.1f}"
@@ -341,7 +341,7 @@ class JoystickWebSocketServer:
         """ジョイパッドの入力イベントを受け取るループ
         """
         self.running = True
-        print('start')
+        print('joystick_monitor thread start')
         while self.running:
             if pygame.joystick.get_count() > 0:
                 for event in pygame.event.get():
@@ -435,13 +435,13 @@ class JoystickWebSocketServer:
 
     def run_websocket_server(self):
         asyncio.set_event_loop(asyncio.new_event_loop())
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.main_server())
+        self.loop = asyncio.get_event_loop()
+        self.loop.run_until_complete(self.main_server())
 
     def update_server_status_display(self):
         status_text = "停止中" if not self.running else "稼働中"
         self.server_status.config(
-            text=f"WebSocket: {status_text} (ポート: {self.settings['port']})"
+            text=f"WebSocket: {status_text} (ポート: {self.settings.port})"
         )
 
     def load_settings(self):
@@ -453,15 +453,11 @@ class JoystickWebSocketServer:
                 return self.DEFAULT_SETTINGS.copy()
         return self.DEFAULT_SETTINGS.copy()
 
-    def save_settings(self):
-        with open(self.CONFIG_FILE, 'w') as f:
-            json.dump(self.settings, f)
-
     async def main_server(self):
         async with websockets.serve(
             self.websocket_handler,
             "0.0.0.0",
-            self.settings['port']
+            self.settings.port
         ):
             await self.send_joystick_events()
 
@@ -470,35 +466,38 @@ class JoystickWebSocketServer:
             self.running = False
             self.scratch_thread.join()
             self.joystick_thread.join()
-            self.control_button.config(text="サーバー起動")
+            self.calc_thread.join()
             self.update_server_status_display()
-        else:
-            self.running = True
-            self.server_thread = threading.Thread(
-                target=self.run_websocket_server,
-                daemon=True
-            )
-            self.server_thread.start()
-            self.control_button.config(text="サーバー停止")
-            self.update_server_status_display()
+            self.loop.stop()
+            self.loop.close()
+        
+        self.running = True
+        self.server_thread = threading.Thread(
+            target=self.run_websocket_server,
+            daemon=True
+        )
+        self.server_thread.start()
 
-            self.joystick_thread = threading.Thread(
-                target=self.joystick_monitor,
-                daemon=True
-            )
-            self.joystick_thread.start()
+        #self.control_button.config(text="サーバー停止")
+        self.update_server_status_display()
 
-            self.scratch_thread = threading.Thread(
-                target=self.thread_scratch,
-                daemon=True
-            )
-            self.scratch_thread.start()
+        self.joystick_thread = threading.Thread(
+            target=self.joystick_monitor,
+            daemon=True
+        )
+        self.joystick_thread.start()
 
-            self.calc_thread = threading.Thread(
-                target=self.thread_calc,
-                daemon=True
-            )
-            self.calc_thread.start()
+        self.scratch_thread = threading.Thread(
+            target=self.thread_scratch,
+            daemon=True
+        )
+        self.scratch_thread.start()
+
+        self.calc_thread = threading.Thread(
+            target=self.thread_calc,
+            daemon=True
+        )
+        self.calc_thread.start()
 
     def on_close(self):
         self.running = False

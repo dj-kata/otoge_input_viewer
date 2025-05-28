@@ -2,115 +2,15 @@
 <html lang="ja">
 <head>
     <title>WebSocket マルチイベント表示</title>
-    <style>
-        html{
-            height: 100%;
-        }
-        body { 
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.99);
-            margin: 0px;
-            padding: 0px;
-            font-family: 'RocknRoll One', sans-serif;
-            color:#aaddff;   
-            font-size:2px;
-            color: #fff;
-        }
-        .background{
-            height: 100%;
-            background-size: 100% 100%;
-            background-position: left top;
-            background-repeat: no-repeat;
-            margin: 0;
-            padding: 0;
-        }
-        :root{
-            --num: 20;
-            --skip-no-update: 0; /* 1:更新のない行を飛ばす */
-        }
-        tr :nth-child(2){
-            height: 30px;
-        }
-        table#disp{
-            border-spacing: 10px 4px;
-        }
-        table#disp td{
-            text-align: center;
-            color: #7fa;
-            width: 36px;
-            height: 54px;
-            line-height: 1px;
-            text-shadow: 1px 1px 0 #000,
-                          -1px 1px 0 #000,
-                          1px -1px 0 #000,
-                          -1px -1px 0 #000;
-        }
-        td.btn{
-            box-shadow: none;
-            border: 2px solid #cccccc;
-            font-size: 8px;
-        }
-        table.info{
-            text-align: left;
-            font-size: 16px;
-            padding-left: 13px;
-            border-spacing: 0 0;
-            line-height: 2px;
-            text-shadow: 2px 2px 0 #000,
-                          -2px 2px 0 #000,
-                          2px -2px 0 #000,
-                          -2px -2px 0 #000;
-        }
-        .scr-top{
-          background: #000000;
-          border: 2px #cccccc solid;
-          border-radius: 50px 50px 0% 0%;
-          box-shadow: 0 0 0 2px #cccccc;
-          color: #0000aa;
-          display: inline-block;
-          width: 100px;
-          height: 50px;
-          line-height: 3;
-          margin: 4px;
-          padding: 0;
-          text-align: center;
-          text-decoration: none;
-          box-shadow: none;
-        }
-        .scr-down {
-          border: 2px #cccccc solid;
-          background: #000000;
-          border-radius: 0% 0% 50px 50px;
-          box-shadow: 0 0 0 2px #cccccc;
-          color: #0000aa;
-          display: inline-block;
-          width: 100px;
-          height: 50px;
-          line-height: 3;
-          margin: 4px;
-          padding: 0;
-          text-align: center;
-          text-decoration: none;
-          box-shadow: none;
-        }
-        warning {
-            font-size: 60px;
-            color: red;
-        }
-        release {
-            color: #dff;
-        }
-        density {
-            color: #dff;
-        }
-        notes {
-            color: #ffeeee;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="iidx.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" />
 </head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
-        const ws = new WebSocket('ws://localhost:8765')
+        var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+        var ws_url = 'ws://localhost:' + port
+        console.log(ws_url)
+        const ws = new WebSocket(ws_url)
         const eventLog = document.getElementById('eventLog')
         const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
         const not_pushed = "0 0 10px #fff"
