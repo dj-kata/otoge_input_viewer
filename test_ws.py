@@ -9,6 +9,7 @@ import threading
 from queue import Queue
 import os
 import json
+import time
 
 class SettingsDialog(tk.Toplevel):
     def __init__(self, parent, settings):
@@ -81,11 +82,16 @@ class JoystickWebSocketServer:
     def __init__(self, root):
         self.root = root
         self.root.title("Joystick WebSocket Server")
+        self.scratch_queue = Queue() # スクラッチだけoff用処理も入れるため分ける
         self.event_queue = Queue()
         self.running = False
         self.clients = set()
         self.button_count = 0
         self.current_joystick_id = 0
+        # スクラッチ判定用
+        self.pre_scr_val = [None, None]
+        self.pre_scr_is_up = [False, False]
+
         self.settings = self.load_settings()
 
         self.setup_gui()
@@ -118,9 +124,8 @@ class JoystickWebSocketServer:
         # コントローラ変更ボタン
         self.change_joystick_btn = ttk.Button(
             main_frame,
-            text="コントローラ変更",
+            text="change",
             command=self.change_joystick,
-            state=tk.DISABLED
         )
         self.change_joystick_btn.pack(pady=5)
 
@@ -148,6 +153,15 @@ class JoystickWebSocketServer:
         )
         self.control_button.pack(pady=10)
 
+        # その他情報表示
+        self.other_info = ttk.Label(
+            main_frame,
+            text=f"",
+            font=("Meiryo UI", 10)
+        )
+        self.other_info.pack(pady=5)
+
+
     def start_threads(self):
         """スレッドの起動処理（追加）"""
         # ジョイパッド監視スレッド
@@ -162,6 +176,13 @@ class JoystickWebSocketServer:
             target=self.run_websocket_server,
             daemon=True
         )
+
+        # 皿処理スレッド（初期状態では非起動）
+        self.scratch_thread = threading.Thread(
+            target=self.thread_scratch,
+            daemon=True
+        )
+        self.scratch_thread.start()
 
     def open_settings_dialog(self):
         dialog = SettingsDialog(self.root, self.settings)
@@ -211,7 +232,37 @@ class JoystickWebSocketServer:
             self.joystick_info.config(text=str(e), foreground="red")
             self.running = False
 
+    def thread_scratch(self):
+        """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
+        """
+        state_last = [0]*4
+        time_last_active = [0]*4 # 最後に命令を受信した時刻
+        while self.running:
+            if not self.scratch_queue.empty(): # スクラッチ用キューがある場合
+                tmp = self.scratch_queue.get()
+                self.event_queue.put(tmp)
+                state_last[tmp['pos']] = 1
+                time_last_active[tmp['pos']] = time.perf_counter()
+                # 反対側をオフにする
+                tmp_off = {'value':0, 'direction':1-tmp['direction'], 'type':'axis', 'pos': tmp['axis']*2 + (1-tmp['direction'])}
+                self.event_queue.put(tmp_off)
+                state_last[tmp_off['pos']] = 0
+            else:
+                cur = time.perf_counter()
+                for i in range(4):
+                    if (cur - time_last_active[i] > 0.1) and state_last[i]:
+                        event_data = {
+                            'type': 'axis',
+                            'pos': i,
+                            'value': 0
+                        }
+                        self.event_queue.put(event_data)
+                        state_last[i] = 0
+            time.sleep(0.01)
+
     def joystick_monitor(self):
+        """ジョイパッドの入力イベントを受け取るループ
+        """
         self.running = True
         while self.running:
             if pygame.joystick.get_count() > 0:
@@ -220,16 +271,38 @@ class JoystickWebSocketServer:
                 pygame.time.wait(20)
             else:
                 self.joystick_info.config(text="ジョイパッド切断", foreground="red")
-                pygame.time.wait(1000)
+                pygame.time.wait(100)
 
     def process_joystick_event(self, event):
+        """1つのジョイパッド入力イベントを読み込んでwebsocket出力に変換する。
+
+        Args:
+            event (pygame.event): 入力イベント
+        """
         event_data = None
         
         if event.type == pygame.JOYAXISMOTION:
+            out_direction = -1
+            if self.pre_scr_val[event.axis] is not None:
+                if event.value > self.pre_scr_val[event.axis]:
+                    #if self.settings.playmode != self.playmode.sdvx:
+                        #if not self.pre_scr_is_up[event.axis]:
+                        #    self.density_hist.append(self.time.perf_counter())
+                    out_direction = 0
+                    self.pre_scr_is_up[event.axis] = True
+                elif event.value < self.pre_scr_val[event.axis]:
+                    #if self.settings.playmode != self.playmode.sdvx:
+                    #    if self.pre_scr_is_up[event.axis]:
+                    #        self.density_hist.append(self.time.perf_counter())
+                    out_direction = 1
+                    self.pre_scr_is_up[event.axis] = False
+            self.pre_scr_val[event.axis] = event.value
             event_data = {
                 'type': 'axis',
                 'axis': event.axis,
-                'value': round(event.value, 2)
+                'direction': out_direction,
+                'pos': event.axis*2 + out_direction,
+                'value': 1
             }
         elif event.type == pygame.JOYBUTTONDOWN:
             self.button_count += 1
@@ -247,7 +320,10 @@ class JoystickWebSocketServer:
             }
         
         if event_data:
-            self.event_queue.put(event_data)
+            if event_data['type'] == 'axis':
+                self.scratch_queue.put(event_data)
+            else:
+                self.event_queue.put(event_data)
 
     def update_counter_display(self):
         self.counter_label.config(text=f"ボタン押下回数: {self.button_count}")

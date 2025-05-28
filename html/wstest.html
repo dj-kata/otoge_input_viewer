@@ -105,15 +105,30 @@
                 // 単一イベントと配列の両方に対応
                 const processedEvents = Array.isArray(events) ? events : [events];
                 processedEvents.forEach(e => {
-                  $('val').html(e.button);
-                  $('val2').html(e.state);
-                  var btn = e.button+1
-                  if (e.state == 'down'){
-                      $('#btn'+btn).css('box-shadow', pushed)
-                      $('#btn'+btn).css('background', '#aaddff')
-                  }else{
-                      $('#btn'+btn).css('box-shadow', 'none')
-                      $('#btn'+btn).css('background', '#000000')
+                  if (e.type == 'button'){
+                    var btn = e.button+1
+                    if (e.state == 'down'){
+                        $('#btn'+btn).css('box-shadow', pushed)
+                        $('#btn'+btn).css('background', '#aaddff')
+                    }else{
+                        $('#btn'+btn).css('box-shadow', 'none')
+                        $('#btn'+btn).css('background', '#000000')
+                    }
+                  }else if (e.type == 'axis'){
+                    var direction = ""
+                    if (e.pos == 0){
+                        direction = '.scr-down'
+                    }
+                    else{
+                        direction = '.scr-top'
+                    }
+                    if (e.value == 1){
+                        $(direction).css('box-shadow', pushed)
+                        $(direction).css('background', '#aaddff')
+                    }else{
+                        $(direction).css('box-shadow', 'none')
+                        $(direction).css('background', '#000000')
+                    }
                   }
                 })
             } catch (e) {
