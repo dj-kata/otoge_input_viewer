@@ -300,29 +300,31 @@ class JoystickWebSocketServer:
                         if tmp_release < self.settings.ln_threshold/1000:
                             list_allkeys.append(tmp_release)
                             list_eachkey[key].append(tmp_release)
+                            # リリース出力
+                            if len(list_allkeys) > self.settings.size_release_hist:
+                                list_allkeys.pop(0)
+                            release = sum(list_allkeys) / len(list_allkeys)
+                            event_data = {
+                                'type': 'release',
+                                'value': f"{release*1000:.1f}"
+                            }
+                            self.event_queue.put(event_data)
+
+                            if len(list_eachkey[key]) > self.settings.size_release_key_hist:
+                                list_allkeys.pop(0)
+                            release = sum(list_eachkey[key]) / len(list_eachkey[key])
+                            event_data = {
+                                'type': 'release_eachkey',
+                                'button': key,
+                                'value': f"{release*1000:.1f}"
+                            }
+                            self.event_queue.put(event_data)
+
                 elif tmp['type'] == 'axis': # スクラッチ
                     if tmp['direction'] != list_last_scratch[tmp['axis']]:
                         list_density.append(cur_time)
                     list_last_scratch[tmp['axis']] = tmp['direction']
             elif cur_time - time_last_sent > SEND_INTERVAL: # 各種出力
-                if len(list_allkeys) > 0:
-                    list_allkeys = list_allkeys[-self.settings.size_release_hist:]
-                    release = sum(list_allkeys) / len(list_allkeys)
-                    event_data = {
-                        'type': 'release',
-                        'value': f"{release*1000:.1f}"
-                    }
-                    self.event_queue.put(event_data)
-                    time_last_sent = cur_time
-                for k in list_eachkey.keys():
-                    list_eachkey[k] = list_eachkey[k][-self.settings.size_release_key_hist:]
-                    release = sum(list_eachkey[k]) / len(list_eachkey[k])
-                    event_data = {
-                        'type': 'release_eachkey',
-                        'button': k,
-                        'value': f"{release*1000:.1f}"
-                    }
-                    self.event_queue.put(event_data)
                 if len(list_density) > 0: # 密度の出力
                     if cur_time - list_density[-1] > self.settings.time_window_density:
                         list_density = []
@@ -336,8 +338,7 @@ class JoystickWebSocketServer:
                         'value': f"{density:.1f}"
                     }
                     self.event_queue.put(event_data)
-                else:
-                    self.density = 0.0
+                time_last_sent = time.perf_counter()
             time.sleep(0.01)
 
     def joystick_monitor(self):
