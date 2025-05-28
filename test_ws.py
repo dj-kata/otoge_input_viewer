@@ -55,28 +55,63 @@ class SettingsDialog(tk.Toplevel):
         self.ln_threshold = ttk.Entry(frame)
         self.ln_threshold.grid(row=0, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="WebSocketポート:").grid(row=1, column=0, sticky=tk.W)
-        self.port_entry = ttk.Entry(frame)
-        self.port_entry.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(frame, text="リリース速度計算用ノーツ数 (default=200):").grid(row=1, column=0, sticky=tk.W)
+        self.size_release_hist_entry = ttk.Entry(frame)
+        self.size_release_hist_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        # ボタン
-        button_frame = ttk.Frame(frame)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=10)
+        ttk.Label(frame, text="単鍵リリース速度計算用ノーツ数 (default=30)").grid(row=2, column=0, sticky=tk.W)
+        self.size_release_key_hist_entry = ttk.Entry(frame)
+        self.size_release_key_hist_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        ttk.Label(frame, text="譜面密度計算周期(s) (default=2)").grid(row=3, column=0, sticky=tk.W)
+        self.density_interval_entry = ttk.Entry(frame)
+        self.density_interval_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=4, column=0, sticky=tk.W)
+        self.port_entry = ttk.Entry(frame)
+        self.port_entry.grid(row=4, column=1, padx=5, pady=5)
+
+        self.debug_mode_var = tk.BooleanVar()
+        self.debug_mode_check = ttk.Checkbutton(
+            frame,
+            text='debug_mode (default=off)',
+            variable=self.debug_mode_var
+        )
+        self.debug_mode_check.grid(row=5, column=0, columnspan=2, pady=5, sticky=tk.W)
 
     def load_current_settings(self):
         self.ln_threshold.insert(0, str(self.settings.ln_threshold))
+        self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
+        self.size_release_key_hist_entry.insert(0, str(self.settings.size_release_key_hist))
+        self.density_interval_entry.insert(0, str(self.settings.density_interval))
         self.port_entry.insert(0, str(self.settings.port))
-        #self.auto_start_var.set(self.settings['auto_start'])
+        self.debug_mode_var.set(self.settings.debug_mode)
 
     def save(self):
         """設定値をファイルに保存
         """
         try:
             port = int(self.port_entry.get())
+            ln_threshold = int(self.ln_threshold.get())
+            size_release_hist = int(self.size_release_hist_entry.get())
+            size_release_key_hist = int(self.size_release_key_hist_entry.get())
+            density_interval = float(self.density_interval_entry.get())
             if not (1 <= port <= 65535):
                 raise ValueError("ポート番号が無効です")
+            if not (ln_threshold > 0):
+                raise ValueError("LongNotes判定しきい値が無効です")
+            if not (density_interval > 0):
+                raise ValueError("譜面密度計算周期が無効です")
+            if not (size_release_hist > 0):
+                raise ValueError("リリース速度計算用ノーツ数が無効です")
+            if not (size_release_key_hist > 0):
+                raise ValueError("単鍵リリース速度計算用ノーツ数が無効です")
             self.settings.port = port
-            self.settings.ln_threshold = int(self.ln_threshold.get())
+            self.settings.ln_threshold = ln_threshold
+            self.settings.size_release_hist = size_release_hist
+            self.settings.size_release_key_hist = size_release_key_hist
+            self.settings.density_interval = density_interval
+            self.settings.debug_mode = self.debug_mode_var.get()
             self.settings.save()
             with open('html/websocket.css', 'w', encoding='utf-8') as f:
                 f.write(':root {\n    --port:'+str(port)+';\n}')
@@ -278,7 +313,7 @@ class JoystickWebSocketServer:
     def thread_calc(self):
         """release及びdensityの計算用スレッド。
         """
-        SEND_INTERVAL  = 1.0 # 送信周期
+        SEND_INTERVAL  = 0.5 # 送信周期
         time_last_sent = 0 # 最後に送信した時間
         time_last_active = defaultdict(int) # 各鍵盤で最後にpushされた時刻を記録。
         list_allkeys = [] # 全鍵盤用のログ保存リスト
@@ -324,7 +359,7 @@ class JoystickWebSocketServer:
                     if tmp['direction'] != list_last_scratch[tmp['axis']]:
                         list_density.append(cur_time)
                     list_last_scratch[tmp['axis']] = tmp['direction']
-            elif cur_time - time_last_sent > SEND_INTERVAL: # 各種出力
+            elif cur_time - time_last_sent > self.settings.density_interval: # 各種出力
                 if len(list_density) > 0: # 密度の出力
                     if cur_time - list_density[-1] > self.settings.time_window_density:
                         list_density = []
