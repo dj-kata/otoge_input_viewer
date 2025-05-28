@@ -35,10 +35,15 @@
             border-spacing: 10px 4px;
         }
         table#disp td{
+            text-align: center;
             color: #7fa;
-            width: 24px;
-            height: 37px;
+            width: 36px;
+            height: 54px;
             line-height: 1px;
+            text-shadow: 1px 1px 0 #000,
+                          -1px 1px 0 #000,
+                          1px -1px 0 #000,
+                          -1px -1px 0 #000;
         }
         td.btn{
             box-shadow: none;
@@ -59,12 +64,12 @@
         .scr-top{
           background: #000000;
           border: 2px #cccccc solid;
-          border-radius: 40px 40px 0% 0%;
+          border-radius: 50px 50px 0% 0%;
           box-shadow: 0 0 0 2px #cccccc;
           color: #0000aa;
           display: inline-block;
-          width: 80px;
-          height: 40px;
+          width: 100px;
+          height: 50px;
           line-height: 3;
           margin: 4px;
           padding: 0;
@@ -75,18 +80,31 @@
         .scr-down {
           border: 2px #cccccc solid;
           background: #000000;
-          border-radius: 0% 0% 40px 40px;
+          border-radius: 0% 0% 50px 50px;
           box-shadow: 0 0 0 2px #cccccc;
           color: #0000aa;
           display: inline-block;
-          width: 80px;
-          height: 40px;
+          width: 100px;
+          height: 50px;
           line-height: 3;
           margin: 4px;
           padding: 0;
           text-align: center;
           text-decoration: none;
           box-shadow: none;
+        }
+        warning {
+            font-size: 60px;
+            color: red;
+        }
+        release {
+            color: #dff;
+        }
+        density {
+            color: #dff;
+        }
+        notes {
+            color: #ffeeee;
         }
     </style>
 </head>
@@ -105,6 +123,7 @@
                 // 単一イベントと配列の両方に対応
                 const processedEvents = Array.isArray(events) ? events : [events];
                 processedEvents.forEach(e => {
+                  $('warning').html('');
                   if (e.type == 'button'){
                     var btn = e.button+1
                     if (e.state == 'down'){
@@ -136,6 +155,8 @@
                     $('#btn'+btn).text(e.value)
                   }else if (e.type == 'density'){
                     $('density').html(e.value)
+                  }else if (e.type == 'notes'){
+                    $('notes').html(e.value)
                   }
                 })
             } catch (e) {
@@ -161,49 +182,48 @@
 <body>
     <div id="eventLog"></div>
 
-    <val>124</val><br>
-    <val2>124</val2>
-  <div class="background">
-    <table id="outer">
-        <tr>
-            <td>
-                <center>
+    <warning>Not Connected!!</warning>
+    <div class="background">
+        <table id="outer">
+            <tr>
+                <td>
+                    <center>
+                        <table id="disp">
+                            <tr>
+                                <td id="btn2" class="btn"></td>
+                                <td id="btn4" class="btn"></td>
+                                <td id="btn6" class="btn"></td>
+                            </tr>
+                        </table>
+                    </center>
                     <table id="disp">
                         <tr>
-                            <td id="btn2" class="btn"></td>
-                            <td id="btn4" class="btn"></td>
-                            <td id="btn6" class="btn"></td>
+                            <td id="btn1" class="btn"></td>
+                            <td id="btn3" class="btn"></td>
+                            <td id="btn5" class="btn"></td>
+                            <td id="btn7" class="btn"></td>
                         </tr>
                     </table>
-                </center>
-                <table id="disp">
-                    <tr>
-                        <td id="btn1" class="btn"></td>
-                        <td id="btn3" class="btn"></td>
-                        <td id="btn5" class="btn"></td>
-                        <td id="btn7" class="btn"></td>
-                    </tr>
-                </table>
 
-            </td>
+                </td>
 
-            <td>
-                <table id="disp">
-                    <tr>
-                        <td><div class="scr-top"></div></td>
-                    </tr>
+                <td>
+                    <table id="disp">
+                        <tr>
+                            <td><div class="scr-top"></div></td>
+                        </tr>
 
-                    <tr>
-                        <td><div class="scr-down"></div></td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-    <table class="info">
-        <tr><td>release:&nbsp;</td><td><release></release> ms</td></tr>
-        <tr><td>density:&nbsp;</td><td><density></density> n/s</td></tr>
-    </table>
-  </div>
+                        <tr>
+                            <td><div class="scr-down"></div></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        <table class="info">
+            <tr><td>release:&nbsp;</td><td><release></release> ms</td><td></td><td></td></tr>
+            <tr><td>density:&nbsp;</td><td><density></density> n/s</td><td>&nbsp;&nbsp;notes:&nbsp;</td><td><notes></notes></td></tr>
+        </table>
+    </div>
 </body>
 </html>

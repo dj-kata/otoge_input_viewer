@@ -136,7 +136,7 @@ class JoystickWebSocketServer:
         # ボタンカウンター
         self.counter_label = ttk.Label(
             main_frame,
-            text="ボタン押下回数: 0",
+            text="notes: 0",
             font=("Meiryo UI", 10)
         )
         self.counter_label.pack(pady=5)
@@ -278,6 +278,7 @@ class JoystickWebSocketServer:
         """
         THRESHOLD_LONG = 225 # LN判定しきい値
         RELEASE_HIST_SIZE = 200 # 何ノーツを用いるか
+        RELEASE_HIST_KEY_SIZE = 50 # 何ノーツを用いるか
         SEND_INTERVAL  = 1.0 # 送信周期
         TIME_WINDOW_DENSITY=2.5 # 密度用
         time_last_sent = 0 # 最後に送信した時間
@@ -315,7 +316,7 @@ class JoystickWebSocketServer:
                     self.event_queue.put(event_data)
                     time_last_sent = cur_time
                 for k in list_eachkey.keys():
-                    list_eachkey[k] = list_eachkey[k][-RELEASE_HIST_SIZE:]
+                    list_eachkey[k] = list_eachkey[k][-RELEASE_HIST_KEY_SIZE:]
                     release = sum(list_eachkey[k]) / len(list_eachkey[k])
                     event_data = {
                         'type': 'release_eachkey',
@@ -380,10 +381,12 @@ class JoystickWebSocketServer:
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.button_count += 1
                 self.root.after(0, self.update_counter_display)
+                self.event_queue.put({'type':'notes', 'value':self.button_count})
             self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
             self.button_count += 1
             self.root.after(0, self.update_counter_display)
+            self.event_queue.put({'type':'notes', 'value':self.button_count})
             event_data = {
                 'type': 'button',
                 'button': event.button,
@@ -404,7 +407,7 @@ class JoystickWebSocketServer:
                 self.event_queue.put(event_data)
 
     def update_counter_display(self):
-        self.counter_label.config(text=f"ボタン押下回数: {self.button_count}")
+        self.counter_label.config(text=f"notes: {self.button_count}")
 
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
