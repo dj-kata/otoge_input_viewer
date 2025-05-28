@@ -92,7 +92,7 @@ class JoystickWebSocketServer:
         self.current_joystick_id = 0
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
-        self.pre_scr_is_up = [False, False]
+        self.pre_scr_direction = [-1, -1]
 
         self.settings = self.load_settings()
 
@@ -367,10 +367,8 @@ class JoystickWebSocketServer:
             if self.pre_scr_val[event.axis] is not None:
                 if event.value > self.pre_scr_val[event.axis]:
                     out_direction = 0
-                    self.pre_scr_is_up[event.axis] = True
                 elif event.value < self.pre_scr_val[event.axis]:
                     out_direction = 1
-                    self.pre_scr_is_up[event.axis] = False
             self.pre_scr_val[event.axis] = event.value
             event_data = {
                 'type': 'axis',
@@ -379,6 +377,10 @@ class JoystickWebSocketServer:
                 'pos': event.axis*2 + out_direction,
                 'value': 1
             }
+            if out_direction != self.pre_scr_direction[event.axis]:
+                self.button_count += 1
+                self.root.after(0, self.update_counter_display)
+            self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
             self.button_count += 1
             self.root.after(0, self.update_counter_display)
