@@ -100,10 +100,6 @@ class JoystickWebSocketServer:
         self.init_pygame()
         self.start_threads()
 
-        ## 自動起動処理
-        #if self.settings['auto_start']:
-        #    self.root.after(100, self.toggle_server)
-
     def setup_gui(self):
         """GUIの設定を行う
         """
@@ -144,7 +140,7 @@ class JoystickWebSocketServer:
         # サーバー状態表示
         self.server_status = ttk.Label(
             main_frame,
-            text=f"WebSocket: 停止中 (ポート: {self.settings['port']})",
+            text=f"WebSocket port: {self.settings['port']}",
             font=("Meiryo UI", 10)
         )
         self.server_status.pack(pady=5)
