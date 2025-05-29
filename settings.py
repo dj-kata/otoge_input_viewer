@@ -9,7 +9,7 @@ class playmode(Enum):
 
 class Settings:
     def __init__(self):
-        self.geometry = '400x300+50+50'
+        self.geometry = '400x200+50+50'
         self.ln_threshold = 225
         self.size_release_hist = 20
         self.size_release_key_hist = 30
