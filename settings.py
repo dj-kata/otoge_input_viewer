@@ -9,11 +9,12 @@ class playmode(Enum):
 
 class Settings:
     def __init__(self):
-        self.lx = 0
-        self.ly = 0
+        self.geometry = '400x300+50+50'
         self.ln_threshold = 225
-        self.size_release_hist = 100
-        self.time_window_density = 5
+        self.size_release_hist = 20
+        self.size_release_key_hist = 30
+        self.density_interval = 0.5
+        self.port = 8765
         self.connected_idx = None
         self.debug_mode = False # コントローラ入力の全dumpなど
         self.playmode = playmode.iidx_sp
@@ -24,11 +25,11 @@ class Settings:
         self.save()
 
     def disp(self):
-        print(f"lx={self.lx}")
-        print(f"ly={self.ly}")
+        print(f"geometry={self.geometry}")
         print(f"ln_threshold={self.ln_threshold}")
         print(f"size_release_hist={self.size_release_hist}")
-        print(f"time_window_density={self.time_window_density}")
+        print(f"size_release_key_hist={self.size_release_key_hist}")
+        print(f"density_interval={self.density_interval}")
         print(f"connected_idx={self.connected_idx}")
         print(f"playmode={self.playmode.name}")
         print(f"debug_mode={self.debug_mode}")
