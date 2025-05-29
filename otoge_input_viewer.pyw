@@ -18,7 +18,7 @@ import subprocess
 from bs4 import BeautifulSoup
 import requests
 
-# 残件: 設定画面を何度か開いた後にevent_loopが複数ないか確認,1-7鍵だけ拾うように修正
+# 残件: 1-7鍵だけ拾うように修正, 最後に繋いでいたコントローラを再開する設定
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -195,7 +195,7 @@ class JoystickWebSocketServer:
         settings_menu.add_command(label="config", command=self.open_settings_dialog)
         self.menubar.add_cascade(label="file", menu=settings_menu)
 
-        main_frame = ttk.Frame(self.root, padding=10)
+        main_frame = ttk.Frame(self.root, padding=6)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # ジョイパッド情報
