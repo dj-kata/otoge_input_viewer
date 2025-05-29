@@ -17,7 +17,7 @@ import subprocess
 from bs4 import BeautifulSoup
 import requests
 
-# 残件: アプデ機能、1P側の準備、ボルテもやる？、モード切替ボタン
+# 残件: 1P側の準備、ボルテもやる？、モード切替ボタン
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
