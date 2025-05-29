@@ -14,6 +14,8 @@ from collections import defaultdict
 import logging, logging.handlers
 from settings import Settings, playmode
 
+# 残件: changeボタン修正、アプデ機能、1P側の準備、ボルテもやる？、モード切替ボタン
+
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -138,6 +140,7 @@ class JoystickWebSocketServer:
         self.setup_gui()
         self.init_pygame()
         self.start_threads()
+        logger.debug('started!')
 
     def setup_gui(self):
         """GUIの設定を行う
@@ -233,6 +236,8 @@ class JoystickWebSocketServer:
         self.calc_thread.start()
 
     def open_settings_dialog(self):
+        """設定ウィンドウを開く
+        """
         dialog = SettingsDialog(self.root, self.settings)
         self.root.wait_window(dialog)
         self.settings.load()
@@ -384,6 +389,8 @@ class JoystickWebSocketServer:
         while self.running:
             if pygame.joystick.get_count() > 0:
                 for event in pygame.event.get():
+                    if self.settings.debug_mode:
+                        logger.debug(event)
                     self.process_joystick_event(event)
                 pygame.time.wait(20)
             else:
