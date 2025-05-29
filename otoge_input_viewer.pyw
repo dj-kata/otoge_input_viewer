@@ -230,14 +230,6 @@ class JoystickWebSocketServer:
         )
         self.server_status.pack(pady=5)
 
-        # 制御ボタン
-        self.control_button = ttk.Button(
-            main_frame,
-            text="reset threads",
-            command=self.toggle_server
-        )
-        self.control_button.pack(pady=10)
-
         # その他情報表示
         self.other_info = ttk.Label(
             main_frame,
@@ -565,7 +557,9 @@ class JoystickWebSocketServer:
             self.calc_thread.join()
             self.update_server_status_display()
             self.loop.stop()
-            #self.loop.close()
+            while self.loop.is_running():
+                time.sleep(0.3)
+            self.loop.close()
         
         self.running = True
         self.server_thread = threading.Thread(
