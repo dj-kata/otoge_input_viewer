@@ -142,6 +142,7 @@ class JoystickWebSocketServer:
 
         self.setup_gui()
         self.init_pygame()
+        self.start_monitor()
         self.start_threads()
         logger.debug('started!')
 
@@ -206,17 +207,18 @@ class JoystickWebSocketServer:
         )
         self.other_info.pack(pady=5)
 
-
-    def start_threads(self):
-        """スレッドの起動処理
-        """
+    def start_monitor(self):
         # ジョイパッド監視スレッド
         self.joystick_thread = threading.Thread(
-            target=self.joystick_monitor,
+            target=self.monitor_thread,
             daemon=True
         )
         self.joystick_thread.start()
 
+    def start_threads(self):
+        """スレッドの起動処理
+        """
+        self.running = True
         # WebSocketサーバースレッド（初期状態では非起動）
         self.server_thread = threading.Thread(
             target=self.run_websocket_server,
@@ -249,11 +251,13 @@ class JoystickWebSocketServer:
         self.toggle_server()
 
     def change_joystick(self):
+        #self.init_pygame()
         count = pygame.joystick.get_count()
+        print('count=', count)
         if count < 1:
             return
         elif count == 1:
-            self.reconnect_joystick(0)
+            self.reconnect_joystick()
         else:
             devices = [f"ジョイパッド {i}" for i in range(count)]
             choice = simpledialog.askinteger(
@@ -264,16 +268,17 @@ class JoystickWebSocketServer:
                 parent=self.root
             )
             if choice is not None:
-                self.reconnect_joystick(choice)
+                self.reconnect_joystick()
 
-    def reconnect_joystick(self, joystick_id):
+    def reconnect_joystick(self):
+        """ジョイパッドへの再接続処理。
+        """
         try:
-            if pygame.joystick.get_count() > joystick_id:
-                self.joystick = pygame.joystick.Joystick(joystick_id)
-                self.joystick.init()
-                self.current_joystick_id = joystick_id
-                name = self.joystick.get_name()
-                self.joystick_info.config(text=f"接続ジョイパッド: {name} (ID: {joystick_id})")
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
+            self.current_joystick_id = 0
+            name = self.joystick.get_name()
+            self.joystick_info.config(text=f"connected: {name} (ID: 0)", foreground='blue')
         except pygame.error as e:
             print(f"ジョイパッド接続エラー: {e}")
 
@@ -284,11 +289,11 @@ class JoystickWebSocketServer:
             if pygame.joystick.get_count() == 0:
                 raise pygame.error("No joystick detected")
             
-            self.reconnect_joystick(0)
+            self.reconnect_joystick()
             self.change_joystick_btn.config(state=tk.NORMAL)
         except pygame.error as e:
+            print(e)
             self.joystick_info.config(text=str(e), foreground="red")
-            self.running = False
 
     def thread_scratch(self):
         """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
@@ -385,21 +390,21 @@ class JoystickWebSocketServer:
                 time_last_sent = time.perf_counter()
             time.sleep(0.01)
 
-    def joystick_monitor(self):
+    def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
         """
-        self.running = True
-        print('joystick_monitor thread start')
-        while self.running:
-            if pygame.joystick.get_count() > 0:
+        print('monitor_thread start')
+        while True:
+            try:
                 for event in pygame.event.get():
                     if self.settings.debug_mode:
                         logger.debug(event)
                     self.process_joystick_event(event)
-                pygame.time.wait(20)
-            else:
-                self.joystick_info.config(text="ジョイパッド切断", foreground="red")
-                pygame.time.wait(100)
+                if pygame.joystick.get_count() == 0:
+                    self.joystick_info.config(text=f"joypad disconnected", foreground='red')
+            except Exception as e:
+                logger.debug(e)
+            pygame.time.wait(20)
 
     def process_joystick_event(self, event):
         """1つのジョイパッド入力イベントを読み込んでwebsocket出力に変換する。
@@ -408,6 +413,8 @@ class JoystickWebSocketServer:
             event (pygame.event): 入力イベント
         """
         event_data = None
+
+        # TODO 接続されたIDの保存、切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
         
         if event.type == pygame.JOYAXISMOTION:
             out_direction = -1
@@ -532,7 +539,7 @@ class JoystickWebSocketServer:
         self.update_server_status_display()
 
         self.joystick_thread = threading.Thread(
-            target=self.joystick_monitor,
+            target=self.monitor_thread,
             daemon=True
         )
         self.joystick_thread.start()
@@ -554,9 +561,9 @@ class JoystickWebSocketServer:
         """
         logger.debug('exit')
         self.running = False
-        pygame.quit()
         self.settings.geometry = self.root.geometry()
         self.settings.save()
+        pygame.quit()
         self.root.destroy()
 
 if __name__ == "__main__":
