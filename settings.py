@@ -9,7 +9,8 @@ class playmode(Enum):
 
 class Settings:
     def __init__(self):
-        self.geometry = '400x200+50+50'
+        self.lx = 50
+        self.ly = 50
         self.ln_threshold = 225
         self.size_release_hist = 20
         self.size_release_key_hist = 30
@@ -25,7 +26,7 @@ class Settings:
         self.save()
 
     def disp(self):
-        print(f"geometry={self.geometry}")
+        print(f"lx, ly = {self.lx}, {self.ly}")
         print(f"ln_threshold={self.ln_threshold}")
         print(f"size_release_hist={self.size_release_hist}")
         print(f"size_release_key_hist={self.size_release_key_hist}")

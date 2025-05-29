@@ -146,7 +146,7 @@ class JoystickWebSocketServer:
         self.pre_scr_direction = [-1, -1]
         self.settings = Settings()
 
-        self.root.geometry(self.settings.geometry)
+        self.root.geometry(f'+{self.settings.lx}+{self.settings.ly}')
 
         self.setup_gui()
         self.init_pygame()
@@ -408,13 +408,13 @@ class JoystickWebSocketServer:
                     list_last_scratch[tmp['axis']] = tmp['direction']
             elif cur_time - time_last_sent > self.settings.density_interval: # 各種出力
                 if len(list_density) > 0: # 密度の出力
-                    if cur_time - list_density[-1] > self.settings.time_window_density:
+                    if cur_time - list_density[-1] > self.settings.density_interval:
                         list_density = []
                     for i in range(len(list_density)):
-                        if cur_time - list_density[i] <= self.settings.time_window_density:
+                        if cur_time - list_density[i] <= self.settings.density_interval:
                             break
                     list_density = list_density[i:] # 直近5秒以内の範囲だけに整形
-                    density = len(list_density) / self.settings.time_window_density
+                    density = len(list_density) / self.settings.density_interval
                     event_data = {
                         'type': 'density',
                         'value': f"{density:.1f}"
@@ -595,7 +595,8 @@ class JoystickWebSocketServer:
         """
         logger.debug('exit')
         self.running = False
-        self.settings.geometry = self.root.geometry()
+        self.settings.lx = self.root.winfo_x()
+        self.settings.ly = self.root.winfo_y()
         self.settings.save()
         pygame.quit()
         self.root.destroy()
@@ -605,6 +606,7 @@ if __name__ == "__main__":
         root = tk.Tk()
         app = JoystickWebSocketServer(root)
         root.protocol("WM_DELETE_WINDOW", app.on_close)
+        root.minsize(300,200)
         root.mainloop()
     except Exception as e:
         logger.error(e)
