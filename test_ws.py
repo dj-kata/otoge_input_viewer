@@ -13,8 +13,11 @@ import time
 from collections import defaultdict
 import logging, logging.handlers
 from settings import Settings, playmode
+import subprocess
+from bs4 import BeautifulSoup
+import requests
 
-# 残件: changeボタン修正、アプデ機能、1P側の準備、ボルテもやる？、モード切替ボタン
+# 残件: アプデ機能、1P側の準備、ボルテもやる？、モード切替ボタン
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -126,6 +129,7 @@ class JoystickWebSocketServer:
     def __init__(self, root):
         self.root = root
         self.root.title("Otoge Input Viewer")
+        self.root.iconbitmap(default='icon.ico')
         self.scratch_queue = Queue() # スクラッチだけoff用処理も入れるため分ける
         self.calc_queue = Queue()  # 計算用のキュー、全イベントをここに流す
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
@@ -145,6 +149,39 @@ class JoystickWebSocketServer:
         self.start_monitor()
         self.start_threads()
         logger.debug('started!')
+        self.check_updates()
+
+    def get_latest_version(self):
+        """GitHubから最新版のバージョンを取得する。
+
+        Returns:
+            str: バージョン番号
+        """
+        ret = None
+        url = 'https://github.com/dj-kata/otoge_input_viewer/tags'
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text,features="html.parser")
+        for tag in soup.find_all('a'):
+            if 'releases/tag/v.' in tag['href']:
+                ret = tag['href'].split('/')[-1]
+                break # 1番上が最新なので即break
+        return ret
+    
+    def check_updates(self):
+        ver = self.get_latest_version()
+        if (ver != SWVER) and (ver is not None):
+            logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
+            ans = tk.messagebox.askquestion('バージョン更新',f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。', icon='warning')
+            if ans == "yes":
+                if os.path.exists('update.exe'):
+                    logger.info('アップデート確認のため終了します')
+                    res = subprocess.Popen('update.exe')
+                    print('fug')
+                    self.on_close()
+                else:
+                    raise ValueError("update.exeがありません")
+        else:
+            logger.debug(f'お使いのバージョンは最新です({SWVER})')
 
     def setup_gui(self):
         """GUIの設定を行う
@@ -572,7 +609,10 @@ class JoystickWebSocketServer:
         self.root.destroy()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = JoystickWebSocketServer(root)
-    root.protocol("WM_DELETE_WINDOW", app.on_close)
-    root.mainloop()
+    try:
+        root = tk.Tk()
+        app = JoystickWebSocketServer(root)
+        root.protocol("WM_DELETE_WINDOW", app.on_close)
+        root.mainloop()
+    except Exception as e:
+        logger.error(e)
