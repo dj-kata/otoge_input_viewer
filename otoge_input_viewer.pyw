@@ -17,6 +17,7 @@ from tooltip import ToolTip
 import subprocess
 from bs4 import BeautifulSoup
 import requests
+import traceback
 
 # 残件: 1-7鍵だけ拾うように修正, 最後に繋いでいたコントローラを再開する設定
 
@@ -206,7 +207,7 @@ class JoystickWebSocketServer:
             text="接続ジョイパッド: なし",
             font=("Meiryo UI", 10)
         )
-        self.joystick_info.pack(pady=5)
+        self.joystick_info.grid(row=0, column=0,sticky=tk.W)
 
         # コントローラ変更ボタン
         self.change_joystick_btn = ttk.Button(
@@ -214,7 +215,7 @@ class JoystickWebSocketServer:
             text="change",
             command=self.change_joystick,
         )
-        self.change_joystick_btn.pack(pady=5)
+        self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
 
         # ボタンカウンター
         self.counter_label = ttk.Label(
@@ -222,7 +223,7 @@ class JoystickWebSocketServer:
             text="notes: 0",
             font=("Meiryo UI", 10)
         )
-        self.counter_label.pack(pady=5)
+        self.counter_label.grid(row=1, sticky=tk.W)
 
         # サーバー状態表示
         self.server_status = ttk.Label(
@@ -230,7 +231,7 @@ class JoystickWebSocketServer:
             text=f"WebSocket port: {self.settings.port}",
             font=("Meiryo UI", 10)
         )
-        self.server_status.pack(pady=5)
+        self.server_status.grid(row=2, sticky=tk.W)
 
         # その他情報表示
         self.other_info = ttk.Label(
@@ -238,7 +239,7 @@ class JoystickWebSocketServer:
             text=f"",
             font=("Meiryo UI", 10)
         )
-        self.other_info.pack(pady=5)
+        self.other_info.grid(row=2, sticky=tk.W)
 
     def start_monitor(self):
         # ジョイパッド監視スレッド
@@ -284,48 +285,47 @@ class JoystickWebSocketServer:
         self.toggle_server()
 
     def change_joystick(self):
-        #self.init_pygame()
         count = pygame.joystick.get_count()
         print('count=', count)
         if count < 1:
             return
-        elif count == 1:
-            self.reconnect_joystick()
         else:
-            devices = [f"ジョイパッド {i}" for i in range(count)]
-            choice = simpledialog.askinteger(
-                "ジョイパッド選択",
-                "接続するジョイパッドの番号を入力:",
-                minvalue=0,
-                maxvalue=count-1,
-                parent=self.root
-            )
-            if choice is not None:
-                self.reconnect_joystick()
+            if (self.settings.connected_idx is None) or (not hasattr(self, 'joystick')):
+                self.reconnect_joystick(0)
+                self.settings.connected_idx = 0
+            else:
+                idx = (self.joystick.get_id() + 1) % count
+                self.reconnect_joystick(idx)
+                self.settings.connected_idx = idx
 
-    def reconnect_joystick(self):
+    def reconnect_joystick(self, idx:int):
         """ジョイパッドへの再接続処理。
         """
         try:
-            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick = pygame.joystick.Joystick(idx)
             self.joystick.init()
-            self.current_joystick_id = 0
+            self.current_joystick_id = idx
             name = self.joystick.get_name()
-            self.joystick_info.config(text=f"connected: {name} (ID: 0)", foreground='blue')
+            self.joystick_info.config(text=f"connected: {name} (ID: {idx})", foreground='blue')
         except pygame.error as e:
-            print(f"ジョイパッド接続エラー: {e}")
+            logger.error(f"ジョイパッド接続エラー: {e}")
 
     def init_pygame(self):
         try:
             pygame.init()
             pygame.joystick.init()
-            if pygame.joystick.get_count() == 0:
+            count = pygame.joystick.get_count()
+            if count == 0:
                 raise pygame.error("No joystick detected")
             
-            self.reconnect_joystick()
+            elif self.settings.connected_idx is None:
+                self.reconnect_joystick(0)
+                self.settings.connected_idx = 0
+            else:
+                self.reconnect_joystick(min(self.settings.connected_idx, count-1))
             self.change_joystick_btn.config(state=tk.NORMAL)
         except pygame.error as e:
-            print(e)
+            logger.error(e)
             self.joystick_info.config(text=str(e), foreground="red")
 
     def thread_scratch(self):
@@ -447,7 +447,7 @@ class JoystickWebSocketServer:
         """
         event_data = None
 
-        # TODO 接続されたIDの保存、切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
+        # TODO 切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
         
         if event.type == pygame.JOYAXISMOTION:
             out_direction = -1
@@ -484,6 +484,10 @@ class JoystickWebSocketServer:
                 'button': event.button,
                 'state': 'up'
             }
+        elif event.type == pygame.JOYDEVICEREMOVED:
+            if self.joystick.get_instance_id() == event.instance_id:
+                self.settings.connected_idx = None
+                self.joystick_info.config(text=f"joypad disconnected", foreground='red')
         
         if event_data:
             self.calc_queue.put(event_data)
@@ -609,4 +613,4 @@ if __name__ == "__main__":
         root.minsize(300,200)
         root.mainloop()
     except Exception as e:
-        logger.error(e)
+        logger.error(traceback.format_exc())
