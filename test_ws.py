@@ -519,42 +519,47 @@ class JoystickWebSocketServer:
             await self.send_joystick_events()
 
     def toggle_server(self):
+        logger.debug('')
         if self.server_thread.is_alive():
             self.running = False
             self.scratch_thread.join()
-            self.joystick_thread.join()
             self.calc_thread.join()
             self.update_server_status_display()
             self.loop.stop()
             self.loop.close()
         
+        logger.debug('')
         self.running = True
         self.server_thread = threading.Thread(
             target=self.run_websocket_server,
             daemon=True
         )
         self.server_thread.start()
+        logger.debug('')
 
-        #self.control_button.config(text="サーバー停止")
         self.update_server_status_display()
+        logger.debug('')
 
         self.joystick_thread = threading.Thread(
             target=self.monitor_thread,
             daemon=True
         )
         self.joystick_thread.start()
+        logger.debug('')
 
         self.scratch_thread = threading.Thread(
             target=self.thread_scratch,
             daemon=True
         )
         self.scratch_thread.start()
+        logger.debug('')
 
         self.calc_thread = threading.Thread(
             target=self.thread_calc,
             daemon=True
         )
         self.calc_thread.start()
+        logger.debug('')
 
     def on_close(self):
         """メインウィンドウ終了時に実行される関数
