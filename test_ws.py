@@ -47,6 +47,7 @@ class SettingsDialog(tk.Toplevel):
         self.create_widgets()
         self.load_current_settings()
 
+        super().geometry(self.settings.geometry)
         super().protocol('WM_DELETE_WINDOW', self.save)
 
     def create_widgets(self):
