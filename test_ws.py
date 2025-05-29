@@ -124,7 +124,7 @@ class SettingsDialog(tk.Toplevel):
 class JoystickWebSocketServer:
     def __init__(self, root):
         self.root = root
-        self.root.title("Joystick WebSocket Server")
+        self.root.title("Otoge Input Viewer")
         self.scratch_queue = Queue() # スクラッチだけoff用処理も入れるため分ける
         self.calc_queue = Queue()  # 計算用のキュー、全イベントをここに流す
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
@@ -136,6 +136,8 @@ class JoystickWebSocketServer:
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
         self.settings = Settings()
+
+        self.root.geometry(self.settings.geometry)
 
         self.setup_gui()
         self.init_pygame()
@@ -243,6 +245,7 @@ class JoystickWebSocketServer:
         self.settings.load()
         self.settings.disp()
         self.update_server_status_display()
+        self.toggle_server()
 
     def change_joystick(self):
         count = pygame.joystick.get_count()
@@ -546,8 +549,13 @@ class JoystickWebSocketServer:
         self.calc_thread.start()
 
     def on_close(self):
+        """メインウィンドウ終了時に実行される関数
+        """
+        logger.debug('exit')
         self.running = False
         pygame.quit()
+        self.settings.geometry = self.root.geometry()
+        self.settings.save()
         self.root.destroy()
 
 if __name__ == "__main__":
