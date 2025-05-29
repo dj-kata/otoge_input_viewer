@@ -7,6 +7,10 @@ class playmode(Enum):
     iidx_dp=1
     sdvx=2
 
+    @classmethod
+    def get_names(cls) -> list:
+        return [i.name for i in cls]
+
 class Settings:
     def __init__(self):
         self.lx = 50
