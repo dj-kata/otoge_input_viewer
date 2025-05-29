@@ -10,13 +10,26 @@
         var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
         var ws_url = 'ws://localhost:' + port
         console.log(ws_url)
-        const ws = new WebSocket(ws_url)
+        var ws = null;
         const eventLog = document.getElementById('eventLog')
         const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
         const not_pushed = "0 0 10px #fff"
         let lastUpdate = Date.now()
 
-        ws.onmessage = event => {
+        function init() {
+            open();
+        }
+        function open() {
+            if (ws == null){
+                ws = new WebSocket(ws_url);
+                ws.onmessage = onMessage;
+                ws.onclose = onClose;
+                //ws.onerror = onError;
+                //ws.onopen = onOpen;
+            }
+        }
+
+        function onMessage(event) {
             try {
                 const events = JSON.parse(event.data)
                 
@@ -63,6 +76,12 @@
                 console.error('データ解析エラー:', e)
             }
         }
+        function onClose(event) {
+            console.log('切断されました')
+            $('warning').html('Not Connected!!');
+            ws = null;
+            setTimeout("open()", 3000);
+        }
 
         function formatEvent(event) {
             const date = new Date().toLocaleTimeString()
@@ -78,6 +97,8 @@
         function clearLog() {
             eventLog.innerHTML = ''
         }
+
+        $(init);
     </script>
 <body>
     <div id="eventLog"></div>
