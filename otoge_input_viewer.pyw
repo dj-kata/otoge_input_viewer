@@ -104,6 +104,14 @@ class SettingsDialog(tk.Toplevel):
         )
         self.debug_mode_check.grid(row=6, column=0, columnspan=2, pady=5, sticky=tk.W)
 
+        self.auto_update_var = tk.BooleanVar()
+        self.auto_update_check = ttk.Checkbutton(
+            frame,
+            text='起動時にアプリを自動更新する (default=on)',
+            variable=self.auto_update_var
+        )
+        self.auto_update_check.grid(row=7, column=0, columnspan=2, pady=5, sticky=tk.W)
+
     def load_current_settings(self):
         self.ln_threshold.insert(0, str(self.settings.ln_threshold))
         self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
@@ -111,6 +119,7 @@ class SettingsDialog(tk.Toplevel):
         self.density_interval_entry.insert(0, str(self.settings.density_interval))
         self.port_entry.insert(0, str(self.settings.port))
         self.debug_mode_var.set(self.settings.debug_mode)
+        self.auto_update_var.set(self.settings.auto_update)
         self.playmode_var.set(self.settings.playmode.value)
 
     def save(self):
@@ -138,6 +147,7 @@ class SettingsDialog(tk.Toplevel):
             self.settings.size_release_key_hist = size_release_key_hist
             self.settings.density_interval = density_interval
             self.settings.debug_mode = self.debug_mode_var.get()
+            self.settings.auto_update = self.auto_update_var.get()
             self.settings.playmode = playmode(self.playmode_var.get())
             self.settings.save()
             with open('html/websocket.css', 'w', encoding='utf-8') as f:

@@ -16,12 +16,13 @@ class Settings:
         self.lx = 50
         self.ly = 50
         self.ln_threshold = 225
-        self.size_release_hist = 20
+        self.size_release_hist = 200
         self.size_release_key_hist = 30
         self.density_interval = 0.5
         self.port = 8765
         self.connected_idx = None
         self.debug_mode = False # コントローラ入力の全dumpなど
+        self.auto_update = True # 自動アップデート
         self.playmode = playmode.iidx_sp
         #self.log_offset = '0'
         self.table_url = ['https://stellabms.xyz/sl/table.html', 'https://mirai-yokohama.sakura.ne.jp/bms/insane_bms.html']
@@ -38,6 +39,7 @@ class Settings:
         print(f"connected_idx={self.connected_idx}")
         print(f"playmode={self.playmode.name}")
         print(f"debug_mode={self.debug_mode}")
+        print(f"auto_update={self.auto_update}")
 
     def load(self):
         try:
