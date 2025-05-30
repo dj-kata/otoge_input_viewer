@@ -65,8 +65,8 @@ class SettingsDialog(tk.Toplevel):
         self.playmode_var = tk.IntVar()
         ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
         for i in range(len(playmode.get_names())):
-            #if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
-            if playmode(i) in (playmode.iidx_dp,):
+            if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
+            #if playmode(i) in (playmode.iidx_dp,):
                 self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i], state='disable'))
             else:
                 self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
