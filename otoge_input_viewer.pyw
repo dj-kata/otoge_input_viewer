@@ -179,7 +179,8 @@ class JoystickWebSocketServer:
         self.start_monitor()
         self.start_threads()
         logger.debug('started!')
-        self.check_updates()
+        if self.settings.auto_update:
+            self.check_updates()
 
     def get_latest_version(self):
         """GitHubから最新版のバージョンを取得する。
@@ -378,7 +379,7 @@ class JoystickWebSocketServer:
             else:
                 cur = time.perf_counter()
                 for i in range(4):
-                    if (cur - time_last_active[i] > 0.1) and state_last[i]:
+                    if (cur - time_last_active[i] > 0.2) and state_last[i]:
                         event_data = {
                             'type': 'axis',
                             'pos': i,
