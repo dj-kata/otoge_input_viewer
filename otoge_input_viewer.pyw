@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 import requests
 import traceback
 
-# 残件: 1-7鍵だけ拾うように修正, 最後に繋いでいたコントローラを再開する設定
+# 残件: 1-7鍵だけ拾うように修正
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -58,28 +58,38 @@ class SettingsDialog(tk.Toplevel):
         super().protocol('WM_DELETE_WINDOW', self.save)
 
     def create_widgets(self):
-        frame = ttk.Frame(self, padding=10)
-        frame.pack(fill=tk.BOTH, expand=True)
+        frame_mode = ttk.Frame(self)
+        frame_mode.pack(padx=0, pady=0)
+
+        self.playmode_radios = []
+        self.playmode_var = tk.IntVar()
+        ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
+        for i in range(len(playmode.get_names())):
+            self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
+            self.playmode_radios[i].pack(side=tk.LEFT, padx=5, pady=5)
+
+        frame = ttk.Frame(self, padding=0)
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5)
 
         ttk.Label(frame, text="LongNotes判定しきい値(ms) (default=225):").grid(row=0, column=0, sticky=tk.W)
         self.ln_threshold = ttk.Entry(frame)
-        self.ln_threshold.grid(row=0, column=1, padx=5, pady=5)
+        self.ln_threshold.grid(row=0, column=1, sticky=tk.W)
 
-        ttk.Label(frame, text="リリース速度計算用ノーツ数 (default=200):").grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(frame, text="リリース速度計算用ノーツ数 (default=200):").grid(row=2, column=0, sticky=tk.W)
         self.size_release_hist_entry = ttk.Entry(frame)
-        self.size_release_hist_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.size_release_hist_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="単鍵リリース速度計算用ノーツ数 (default=30)").grid(row=2, column=0, sticky=tk.W)
+        ttk.Label(frame, text="単鍵リリース速度計算用ノーツ数 (default=30)").grid(row=3, column=0, sticky=tk.W)
         self.size_release_key_hist_entry = ttk.Entry(frame)
-        self.size_release_key_hist_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.size_release_key_hist_entry.grid(row=3, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="譜面密度計算周期(s) (default=2)").grid(row=3, column=0, sticky=tk.W)
+        ttk.Label(frame, text="譜面密度計算周期(s) (default=0.5)").grid(row=4, column=0, sticky=tk.W)
         self.density_interval_entry = ttk.Entry(frame)
-        self.density_interval_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.density_interval_entry.grid(row=4, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=4, column=0, sticky=tk.W)
+        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=5, column=0, sticky=tk.W)
         self.port_entry = ttk.Entry(frame)
-        self.port_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.port_entry.grid(row=5, column=1, padx=5, pady=5)
         ToolTip(self.port_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
 
         self.debug_mode_var = tk.BooleanVar()
@@ -88,7 +98,7 @@ class SettingsDialog(tk.Toplevel):
             text='debug_mode (default=off)',
             variable=self.debug_mode_var
         )
-        self.debug_mode_check.grid(row=5, column=0, columnspan=2, pady=5, sticky=tk.W)
+        self.debug_mode_check.grid(row=6, column=0, columnspan=2, pady=5, sticky=tk.W)
 
     def load_current_settings(self):
         self.ln_threshold.insert(0, str(self.settings.ln_threshold))
