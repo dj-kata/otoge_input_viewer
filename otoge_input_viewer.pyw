@@ -445,7 +445,10 @@ class JoystickWebSocketServer:
                         if cur_time - list_density[i] <= self.settings.density_interval:
                             break
                     list_density = list_density[i:] # 直近5秒以内の範囲だけに整形
-                    density = len(list_density) / self.settings.density_interval
+                    if len(list_density) == 0:
+                        density = 0.0
+                    else:
+                        density = len(list_density) / (cur_time - list_density[0])
                     event_data = {
                         'type': 'density',
                         'value': f"{density:.1f}"
