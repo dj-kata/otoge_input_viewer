@@ -65,7 +65,11 @@ class SettingsDialog(tk.Toplevel):
         self.playmode_var = tk.IntVar()
         ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
         for i in range(len(playmode.get_names())):
-            self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
+            #if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
+            if playmode(i) in (playmode.iidx_dp,):
+                self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i], state='disable'))
+            else:
+                self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
             self.playmode_radios[i].pack(side=tk.LEFT, padx=5, pady=5)
 
         frame = ttk.Frame(self, padding=0)
@@ -107,6 +111,7 @@ class SettingsDialog(tk.Toplevel):
         self.density_interval_entry.insert(0, str(self.settings.density_interval))
         self.port_entry.insert(0, str(self.settings.port))
         self.debug_mode_var.set(self.settings.debug_mode)
+        self.playmode_var.set(self.settings.playmode.value)
 
     def save(self):
         """設定値をファイルに保存
@@ -133,6 +138,7 @@ class SettingsDialog(tk.Toplevel):
             self.settings.size_release_key_hist = size_release_key_hist
             self.settings.density_interval = density_interval
             self.settings.debug_mode = self.debug_mode_var.get()
+            self.settings.playmode = playmode(self.playmode_var.get())
             self.settings.save()
             with open('html/websocket.css', 'w', encoding='utf-8') as f:
                 f.write(':root {\n    --port:'+str(port)+';\n}')
@@ -150,7 +156,7 @@ class JoystickWebSocketServer:
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
         self.running = False
         self.clients = set()
-        self.button_count = 0
+        self.today_notes = 0
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
@@ -181,7 +187,7 @@ class JoystickWebSocketServer:
                 break # 1番上が最新なので即break
         return ret
     
-    def check_updates(self):
+    def check_updates(self, always_disp_dialog=False):
         ver = self.get_latest_version()
         if (ver != SWVER) and (ver is not None):
             logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
@@ -196,6 +202,8 @@ class JoystickWebSocketServer:
                     raise ValueError("update.exeがありません")
         else:
             logger.debug(f'お使いのバージョンは最新です({SWVER})')
+            if always_disp_dialog:
+                messagebox.showinfo("Otoge Input Viewer", f'お使いのバージョンは最新です({SWVER})')
 
     def setup_gui(self):
         """GUIの設定を行う
@@ -205,6 +213,7 @@ class JoystickWebSocketServer:
         
         settings_menu = tk.Menu(self.menubar, tearoff=0)
         settings_menu.add_command(label="config", command=self.open_settings_dialog)
+        settings_menu.add_command(label="update", command=lambda:self.check_updates(True))
         self.menubar.add_cascade(label="file", menu=settings_menu)
 
         main_frame = ttk.Frame(self.root, padding=6)
@@ -226,13 +235,17 @@ class JoystickWebSocketServer:
         )
         self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
 
+        # モード表示
+        self.mode_label = ttk.Label(main_frame, text=f'mode: {self.settings.playmode.name}', font=('Meiryo UI', 10))
+        self.mode_label.grid(row=1, sticky=tk.W)
+
         # ボタンカウンター
         self.counter_label = ttk.Label(
             main_frame,
             text="notes: 0",
             font=("Meiryo UI", 10)
         )
-        self.counter_label.grid(row=1, sticky=tk.W)
+        self.counter_label.grid(row=2, sticky=tk.W)
 
         # サーバー状態表示
         self.server_status = ttk.Label(
@@ -240,7 +253,7 @@ class JoystickWebSocketServer:
             text=f"WebSocket port: {self.settings.port}",
             font=("Meiryo UI", 10)
         )
-        self.server_status.grid(row=2, sticky=tk.W)
+        self.server_status.grid(row=3, sticky=tk.W)
 
         # その他情報表示
         self.other_info = ttk.Label(
@@ -248,7 +261,7 @@ class JoystickWebSocketServer:
             text=f"",
             font=("Meiryo UI", 10)
         )
-        self.other_info.grid(row=2, sticky=tk.W)
+        self.other_info.grid(row=4, sticky=tk.W)
 
     def start_monitor(self):
         # ジョイパッド監視スレッド
@@ -343,6 +356,8 @@ class JoystickWebSocketServer:
         while self.running:
             if not self.scratch_queue.empty(): # スクラッチ用キューがある場合
                 tmp = self.scratch_queue.get()
+                if tmp['direction'] == -1:
+                    continue
                 self.event_queue.put(tmp)
                 state_last[tmp['pos']] = 1
                 time_last_active[tmp['pos']] = time.perf_counter()
@@ -438,6 +453,13 @@ class JoystickWebSocketServer:
                 for event in pygame.event.get():
                     if self.settings.debug_mode:
                         logger.debug(event)
+                    # モードごとに必要なノートのみ通すための判定処理
+                    if event.type == pygame.JOYBUTTONDOWN:
+                        if not ((self.settings.playmode==playmode.iidx_sp and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6)):
+                            continue
+                    if event.type == pygame.JOYAXISMOTION:
+                        if not ((self.settings.playmode==playmode.iidx_sp and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1))):
+                            continue
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
                     self.joystick_info.config(text=f"joypad disconnected", foreground='red')
@@ -471,14 +493,14 @@ class JoystickWebSocketServer:
                 'value': 1
             }
             if out_direction != self.pre_scr_direction[event.axis]:
-                self.button_count += 1
+                self.today_notes += 1
                 self.root.after(0, self.update_counter_display)
-                self.event_queue.put({'type':'notes', 'value':self.button_count})
+                self.event_queue.put({'type':'notes', 'value':self.today_notes})
             self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
-            self.button_count += 1
+            self.today_notes += 1
             self.root.after(0, self.update_counter_display)
-            self.event_queue.put({'type':'notes', 'value':self.button_count})
+            self.event_queue.put({'type':'notes', 'value':self.today_notes})
             event_data = {
                 'type': 'button',
                 'button': event.button,
@@ -508,7 +530,7 @@ class JoystickWebSocketServer:
                 self.event_queue.put(event_data)
 
     def update_counter_display(self):
-        self.counter_label.config(text=f"notes: {self.button_count}")
+        self.counter_label.config(text=f"notes: {self.today_notes}")
 
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
@@ -548,6 +570,7 @@ class JoystickWebSocketServer:
         self.server_status.config(
             text=f"WebSocket: {status_text} (ポート: {self.settings.port})"
         )
+        self.mode_label.config(text=f"mode: {self.settings.playmode.name}")
 
     def load_settings(self):
         if os.path.exists(self.CONFIG_FILE):
