@@ -1,4 +1,4 @@
-# otoge input viewer
+# Otoge Input Viewer
 IIDXコントローラ(PHOENIX WANなど)の入力可視化、リリース速度や入力密度の表示が行えるソフトウェアです。
 OBSへの設定をとても楽に行うことができます。  
 らぐ様の[打鍵ディスプレイツール](https://rag-oji.com/dakendisplay/)の影響を多大に受けていますが、
@@ -20,6 +20,10 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 3. 検出するコントローラを変更したい場合は```changeボタン```を押す
 4. OBSにキー入力状況を表示したい場合は、同梱のHTMLファイル(htmlフォルダ内)をOBSにドラッグ&ドロップする。
 5. SDVXで使いたい場合やリリース計算に使うノーツ数を変更したい場合は設定画面(```メニューバー内config```)から設定を変更してください。
+
+メイン画面において、使いたいコントローラの名前が表示されていてかつ、modeが正しければOKです。
+![image](https://github.com/user-attachments/assets/16f0f6e7-4dc8-4ec5-b488-41acead1b09d)
+
 
 各ブラウザソースはデフォルトでは以下のように警告の文字が表示されていますが、
 正しく接続されてなんらかの表示命令を受信した時点でこの文字が消えるようになっています。
