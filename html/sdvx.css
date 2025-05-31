@@ -35,7 +35,7 @@ tr :nth-child(2){
     height: 30px;
 }
 table#ABCD{
-    border-spacing: 20px 20px;
+    border-spacing: 20px 10px;
 }
 table#LR{
     border-spacing: 10px 10px;
