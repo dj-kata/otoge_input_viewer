@@ -417,7 +417,7 @@ class JoystickWebSocketServer:
                         self.event_queue.put(event_data)
 
                         if len(list_eachkey[key]) > self.settings.size_release_key_hist:
-                            list_allkeys.pop(0)
+                            list_eachkey[key].pop(0)
                         release = sum(list_eachkey[key]) / len(list_eachkey[key])
                         event_data = {
                             'type': 'release_eachkey',
