@@ -50,7 +50,7 @@
                     var direction = ""
                     var direction_other = "" // 逆側
 
-                    direction = 1-e.pos
+                    direction = e.pos
                     last_scr_time[direction] = new Date();
                     if (e.value == 1){
                         $('.scr'+direction).css('box-shadow', pushed)
