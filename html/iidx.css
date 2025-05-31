@@ -56,7 +56,7 @@ table.info{
                     2px -2px 0 #000,
                     -2px -2px 0 #000;
 }
-.scr-top{
+.scr0{
     background: #000000;
     border: 2px #cccccc solid;
     border-radius: 60px 60px 0% 0%;
@@ -72,7 +72,7 @@ table.info{
     text-decoration: none;
     box-shadow: none;
 }
-.scr-down {
+.scr1 {
     border: 2px #cccccc solid;
     background: #000000;
     border-radius: 0% 0% 60px 60px;
