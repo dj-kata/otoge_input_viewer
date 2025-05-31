@@ -9,7 +9,7 @@ IIDX以外のコントローラへの対応も考えており、立ち位置と�
 A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is easy to configure into OBS.
 This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/).
 
-<img src="[https://github.com/user-attachments/assets/287463f4-2578-4c8b-904e-5e7bf9b5e88a](https://github.com/user-attachments/assets/d7644363-2b4e-4731-bac8-074210ea8286)" width=500px>
+<img src="https://github.com/user-attachments/assets/bdb98658-ca48-44f1-b605-40840372ef0b" width=500px>
 <img src="https://github.com/user-attachments/assets/90ca18f6-c383-4c9c-98ec-b0709ff94226" width=500px>  
 
 ![image](https://github.com/user-attachments/assets/adb1d85c-b1b8-4215-85db-04f68acb8037)
