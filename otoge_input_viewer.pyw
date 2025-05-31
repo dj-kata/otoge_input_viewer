@@ -19,8 +19,6 @@ from bs4 import BeautifulSoup
 import requests
 import traceback
 
-# 残件: 1-7鍵だけ拾うように修正
-
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -65,8 +63,8 @@ class SettingsDialog(tk.Toplevel):
         self.playmode_var = tk.IntVar()
         ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
         for i in range(len(playmode.get_names())):
-            if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
-            #if playmode(i) in (playmode.iidx_dp,):
+            #if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
+            if playmode(i) in (playmode.iidx_dp,):
                 self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i], state='disable'))
             else:
                 self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
@@ -364,7 +362,7 @@ class JoystickWebSocketServer:
         """
         print('scratch thread start')
         time_last_sent = 0 # 最後に送信した時間
-        while self.running:
+        while True:
             cur_time = time.perf_counter()
             if cur_time - time_last_sent > self.settings.density_interval: # 各種出力
                 if len(self.list_density) > 0: # 密度の出力
@@ -395,7 +393,7 @@ class JoystickWebSocketServer:
         list_eachkey = defaultdict(list)
         list_last_scratch = defaultdict(str) # 最後にどの向きだったか, axisごとに用意
         print('calc thread start')
-        while self.running:
+        while True:
             tmp = self.calc_queue.get()
             cur_time = time.perf_counter()
             if tmp['type'] == 'button': # 鍵盤
@@ -470,9 +468,9 @@ class JoystickWebSocketServer:
             out_direction = -1
             if self.pre_scr_val[event.axis] is not None:
                 if event.value > self.pre_scr_val[event.axis]:
-                    out_direction = 0
-                elif event.value < self.pre_scr_val[event.axis]:
                     out_direction = 1
+                elif event.value < self.pre_scr_val[event.axis]:
+                    out_direction = 0
             self.pre_scr_val[event.axis] = event.value
             event_data = {
                 'type': 'axis',
@@ -579,14 +577,14 @@ class JoystickWebSocketServer:
         logger.debug('')
         if self.server_thread.is_alive():
             self.running = False
-            self.density_thread.join()
-            self.calc_thread.join()
+            self.server_thread.join()
             self.update_server_status_display()
             self.loop.stop()
             while self.loop.is_running():
                 time.sleep(0.3)
             self.loop.close()
         
+        print('a')
         self.running = True
         self.server_thread = threading.Thread(
             target=self.run_websocket_server,
@@ -601,18 +599,6 @@ class JoystickWebSocketServer:
             daemon=True
         )
         self.joystick_thread.start()
-
-        self.density_thread = threading.Thread(
-            target=self.thread_density,
-            daemon=True
-        )
-        self.density_thread.start()
-
-        self.calc_thread = threading.Thread(
-            target=self.thread_calc,
-            daemon=True
-        )
-        self.calc_thread.start()
 
     def on_close(self):
         """メインウィンドウ終了時に実行される関数
