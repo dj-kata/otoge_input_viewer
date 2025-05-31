@@ -294,11 +294,11 @@ class JoystickWebSocketServer:
         self.server_thread.start()
 
         # 皿処理スレッド
-        self.scratch_thread = threading.Thread(
-            target=self.thread_scratch,
+        self.density_thread = threading.Thread(
+            target=self.thread_density,
             daemon=True
         )
-        self.scratch_thread.start()
+        self.density_thread.start()
 
         # 計算用スレッド
         self.calc_thread = threading.Thread(
@@ -358,36 +358,15 @@ class JoystickWebSocketServer:
             logger.error(e)
             self.joystick_info.config(text=str(e), foreground="red")
 
-    def thread_scratch(self):
+    def thread_density(self):
         """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
         """
-        state_last = [0]*4
-        time_last_active = [0]*4 # 最後に命令を受信した時刻
         print('scratch thread start')
         while self.running:
-            if not self.scratch_queue.empty(): # スクラッチ用キューがある場合
-                tmp = self.scratch_queue.get()
-                if tmp['direction'] == -1:
-                    continue
-                self.event_queue.put(tmp)
-                state_last[tmp['pos']] = 1
-                time_last_active[tmp['pos']] = time.perf_counter()
-                # 反対側をオフにする
-                tmp_off = {'value':0, 'direction':1-tmp['direction'], 'type':'axis', 'pos': tmp['axis']*2 + (1-tmp['direction'])}
-                self.event_queue.put(tmp_off)
-                state_last[tmp_off['pos']] = 0
-            else:
-                cur = time.perf_counter()
-                for i in range(4):
-                    if (cur - time_last_active[i] > 0.2) and state_last[i]:
-                        event_data = {
-                            'type': 'axis',
-                            'pos': i,
-                            'value': 0
-                        }
-                        self.event_queue.put(event_data)
-                        state_last[i] = 0
-            time.sleep(0.01)
+            tmp = self.scratch_queue.get()
+            if tmp['direction'] == -1:
+                continue
+            self.event_queue.put(tmp)
 
     def thread_calc(self):
         """release及びdensityの計算用スレッド。
@@ -401,44 +380,43 @@ class JoystickWebSocketServer:
         list_last_scratch = defaultdict(str) # 最後にどの向きだったか, axisごとに用意
         print('calc thread start')
         while self.running:
+            tmp = self.calc_queue.get()
             cur_time = time.perf_counter()
-            if not self.calc_queue.empty(): # non-blocking 
-                tmp = self.calc_queue.get()
-                if tmp['type'] == 'button': # 鍵盤
-                    key = tmp['button'] # どの鍵盤か。将来的にコントローラ番号も加味したい。 TODO
-                    if tmp['state'] == 'down':
-                        time_last_active[key] = cur_time
-                        list_density.append(cur_time) # LNは関係なく密度計算には使う
-                    else:
-                        tmp_release = cur_time - time_last_active[key]
-                        if tmp_release < self.settings.ln_threshold/1000:
-                            list_allkeys.append(tmp_release)
-                            list_eachkey[key].append(tmp_release)
-                            # リリース出力
-                            if len(list_allkeys) > self.settings.size_release_hist:
-                                list_allkeys.pop(0)
-                            release = sum(list_allkeys) / len(list_allkeys)
-                            event_data = {
-                                'type': 'release',
-                                'value': f"{release*1000:.1f}"
-                            }
-                            self.event_queue.put(event_data)
+            if tmp['type'] == 'button': # 鍵盤
+                key = tmp['button'] # どの鍵盤か。将来的にコントローラ番号も加味したい。 TODO
+                if tmp['state'] == 'down':
+                    time_last_active[key] = cur_time
+                    list_density.append(cur_time) # LNは関係なく密度計算には使う
+                else:
+                    tmp_release = cur_time - time_last_active[key]
+                    if tmp_release < self.settings.ln_threshold/1000:
+                        list_allkeys.append(tmp_release)
+                        list_eachkey[key].append(tmp_release)
+                        # リリース出力
+                        if len(list_allkeys) > self.settings.size_release_hist:
+                            list_allkeys.pop(0)
+                        release = sum(list_allkeys) / len(list_allkeys)
+                        event_data = {
+                            'type': 'release',
+                            'value': f"{release*1000:.1f}"
+                        }
+                        self.event_queue.put(event_data)
 
-                            if len(list_eachkey[key]) > self.settings.size_release_key_hist:
-                                list_allkeys.pop(0)
-                            release = sum(list_eachkey[key]) / len(list_eachkey[key])
-                            event_data = {
-                                'type': 'release_eachkey',
-                                'button': key,
-                                'value': f"{release*1000:.1f}"
-                            }
-                            self.event_queue.put(event_data)
+                        if len(list_eachkey[key]) > self.settings.size_release_key_hist:
+                            list_allkeys.pop(0)
+                        release = sum(list_eachkey[key]) / len(list_eachkey[key])
+                        event_data = {
+                            'type': 'release_eachkey',
+                            'button': key,
+                            'value': f"{release*1000:.1f}"
+                        }
+                        self.event_queue.put(event_data)
 
-                elif tmp['type'] == 'axis': # スクラッチ
-                    if tmp['direction'] != list_last_scratch[tmp['axis']]:
-                        list_density.append(cur_time)
-                    list_last_scratch[tmp['axis']] = tmp['direction']
-            elif cur_time - time_last_sent > self.settings.density_interval: # 各種出力
+            elif tmp['type'] == 'axis': # スクラッチ
+                if tmp['direction'] != list_last_scratch[tmp['axis']]:
+                    list_density.append(cur_time)
+                list_last_scratch[tmp['axis']] = tmp['direction']
+            if cur_time - time_last_sent > self.settings.density_interval: # 各種出力
                 if len(list_density) > 0: # 密度の出力
                     if cur_time - list_density[-1] > self.settings.density_interval:
                         list_density = []
@@ -446,7 +424,7 @@ class JoystickWebSocketServer:
                         if cur_time - list_density[i] <= self.settings.density_interval:
                             break
                     list_density = list_density[i:] # 直近5秒以内の範囲だけに整形
-                    if len(list_density) == 0:
+                    if (len(list_density) == 0) or (cur_time == list_density[0]):
                         density = 0.0
                     else:
                         density = len(list_density) / (cur_time - list_density[0])
@@ -456,7 +434,6 @@ class JoystickWebSocketServer:
                     }
                     self.event_queue.put(event_data)
                 time_last_sent = time.perf_counter()
-            time.sleep(0.01)
 
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
@@ -538,10 +515,7 @@ class JoystickWebSocketServer:
         
         if event_data:
             self.calc_queue.put(event_data)
-            if event_data['type'] == 'axis':
-                self.scratch_queue.put(event_data)
-            else:
-                self.event_queue.put(event_data)
+            self.event_queue.put(event_data)
 
     def update_counter_display(self):
         self.counter_label.config(text=f"notes: {self.today_notes}")
@@ -607,7 +581,7 @@ class JoystickWebSocketServer:
         logger.debug('')
         if self.server_thread.is_alive():
             self.running = False
-            self.scratch_thread.join()
+            self.density_thread.join()
             self.calc_thread.join()
             self.update_server_status_display()
             self.loop.stop()
@@ -630,11 +604,11 @@ class JoystickWebSocketServer:
         )
         self.joystick_thread.start()
 
-        self.scratch_thread = threading.Thread(
-            target=self.thread_scratch,
+        self.density_thread = threading.Thread(
+            target=self.thread_density,
             daemon=True
         )
-        self.scratch_thread.start()
+        self.density_thread.start()
 
         self.calc_thread = threading.Thread(
             target=self.thread_calc,
