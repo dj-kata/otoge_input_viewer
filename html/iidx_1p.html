@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <title>WebSocket マルチイベント表示</title>
+    <title>Otoge Input Viewer(IIDX 2P)</title>
     <link rel="stylesheet" type="text/css" href="iidx.css" />
     <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
 </head>
@@ -14,7 +14,7 @@
         const eventLog = document.getElementById('eventLog')
         const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
         const not_pushed = "0 0 10px #fff"
-        let lastUpdate = Date.now()
+        var last_scr_time = [new Date(), new Date()];
 
         function init() {
             open();
@@ -37,7 +37,7 @@
                 const processedEvents = Array.isArray(events) ? events : [events];
                 processedEvents.forEach(e => {
                   $('warning').html('');
-                  if (e.type == 'button'){
+                  if (e.type == 'button'){ //// 鍵盤
                     var btn = e.button+1
                     if (e.state == 'down'){
                         $('#btn'+btn).css('box-shadow', pushed)
@@ -46,20 +46,20 @@
                         $('#btn'+btn).css('box-shadow', 'none')
                         $('#btn'+btn).css('background', '#000000')
                     }
-                  }else if (e.type == 'axis'){
+                  }else if (e.type == 'axis'){ //// 皿
                     var direction = ""
-                    if (e.pos == 0){
-                        direction = '.scr-down'
-                    }
-                    else{
-                        direction = '.scr-top'
-                    }
+                    var direction_other = "" // 逆側
+
+                    direction = e.pos
+                    last_scr_time[direction] = new Date();
                     if (e.value == 1){
-                        $(direction).css('box-shadow', pushed)
-                        $(direction).css('background', '#aaddff')
+                        $('.scr'+direction).css('box-shadow', pushed)
+                        $('.scr'+direction).css('background', '#aaddff')
+                        $('.scr'+(1-direction)).css('box-shadow', 'none')
+                        $('.scr'+(1-direction)).css('background', '#000000')
                     }else{
-                        $(direction).css('box-shadow', 'none')
-                        $(direction).css('background', '#000000')
+                        $('.scr'+direction).css('box-shadow', 'none')
+                        $('.scr'+direction).css('background', '#000000')
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
@@ -97,8 +97,19 @@
         function clearLog() {
             eventLog.innerHTML = ''
         }
+        
+        function stop_scratch() {
+            cur = new Date();
+            for (i=0; i<2; i++){
+                 if (cur-last_scr_time[i] > 200){
+                    $('.scr'+i).css('box-shadow', 'none')
+                    $('.scr'+i).css('background', '#000000')
+                 }
+            }
+        }
 
         $(init);
+        const c_stop_scr = setInterval(stop_scratch, 200);
     </script>
 <body>
     <div id="eventLog"></div>
@@ -110,14 +121,15 @@
                 <td>
                     <table id="disp">
                         <tr>
-                            <td><div class="scr-top"></div></td>
+                            <td><div class="scr0"></div></td>
                         </tr>
 
                         <tr>
-                            <td><div class="scr-down"></div></td>
+                            <td><div class="scr1"></div></td>
                         </tr>
                     </table>
                 </td>
+
                 <td>
                     <center>
                         <table id="disp">
@@ -136,7 +148,6 @@
                             <td id="btn7" class="btn"></td>
                         </tr>
                     </table>
-
                 </td>
             </tr>
         </table>
