@@ -170,6 +170,7 @@ class JoystickWebSocketServer:
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
+        self.list_density = []
         self.settings = Settings()
 
         self.root.geometry(f'+{self.settings.lx}+{self.settings.ly}')
@@ -362,21 +363,36 @@ class JoystickWebSocketServer:
         """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
         """
         print('scratch thread start')
+        time_last_sent = 0 # 最後に送信した時間
         while self.running:
-            tmp = self.scratch_queue.get()
-            if tmp['direction'] == -1:
-                continue
-            self.event_queue.put(tmp)
+            cur_time = time.perf_counter()
+            if cur_time - time_last_sent > self.settings.density_interval: # 各種出力
+                if len(self.list_density) > 0: # 密度の出力
+                    if cur_time - self.list_density[-1] > self.settings.density_interval:
+                        self.list_density = []
+                    for i in range(len(self.list_density)):
+                        if cur_time - self.list_density[i] <= self.settings.density_interval:
+                            break
+                    self.list_density = self.list_density[i:] # 直近5秒以内の範囲だけに整形
+                    if (len(self.list_density) == 0) or (cur_time == self.list_density[0]):
+                        density = 0.0
+                    else:
+                        density = len(self.list_density) / (cur_time - self.list_density[0])
+                    event_data = {
+                        'type': 'density',
+                        'value': f"{density:.1f}"
+                    }
+                    self.event_queue.put(event_data)
+                time_last_sent = cur_time
+            time.sleep(0.1)
 
     def thread_calc(self):
         """release及びdensityの計算用スレッド。
         """
         SEND_INTERVAL  = 0.5 # 送信周期
-        time_last_sent = 0 # 最後に送信した時間
         time_last_active = defaultdict(int) # 各鍵盤で最後にpushされた時刻を記録。
         list_allkeys = [] # 全鍵盤用のログ保存リスト
         list_eachkey = defaultdict(list)
-        list_density = []
         list_last_scratch = defaultdict(str) # 最後にどの向きだったか, axisごとに用意
         print('calc thread start')
         while self.running:
@@ -386,7 +402,7 @@ class JoystickWebSocketServer:
                 key = tmp['button'] # どの鍵盤か。将来的にコントローラ番号も加味したい。 TODO
                 if tmp['state'] == 'down':
                     time_last_active[key] = cur_time
-                    list_density.append(cur_time) # LNは関係なく密度計算には使う
+                    self.list_density.append(cur_time) # LNは関係なく密度計算には使う
                 else:
                     tmp_release = cur_time - time_last_active[key]
                     if tmp_release < self.settings.ln_threshold/1000:
@@ -414,26 +430,8 @@ class JoystickWebSocketServer:
 
             elif tmp['type'] == 'axis': # スクラッチ
                 if tmp['direction'] != list_last_scratch[tmp['axis']]:
-                    list_density.append(cur_time)
+                    self.list_density.append(cur_time)
                 list_last_scratch[tmp['axis']] = tmp['direction']
-            if cur_time - time_last_sent > self.settings.density_interval: # 各種出力
-                if len(list_density) > 0: # 密度の出力
-                    if cur_time - list_density[-1] > self.settings.density_interval:
-                        list_density = []
-                    for i in range(len(list_density)):
-                        if cur_time - list_density[i] <= self.settings.density_interval:
-                            break
-                    list_density = list_density[i:] # 直近5秒以内の範囲だけに整形
-                    if (len(list_density) == 0) or (cur_time == list_density[0]):
-                        density = 0.0
-                    else:
-                        density = len(list_density) / (cur_time - list_density[0])
-                    event_data = {
-                        'type': 'density',
-                        'value': f"{density:.1f}"
-                    }
-                    self.event_queue.put(event_data)
-                time_last_sent = time.perf_counter()
 
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
