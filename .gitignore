@@ -8,3 +8,5 @@ dist/*
 *.zip
 *.xml
 html/websocket.css
+settings.json
+update.exe
