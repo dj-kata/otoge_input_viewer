@@ -427,9 +427,10 @@ class JoystickWebSocketServer:
                         self.event_queue.put(event_data)
 
             elif tmp['type'] == 'axis': # スクラッチ
-                if tmp['direction'] != list_last_scratch[tmp['axis']]:
-                    self.list_density.append(cur_time)
-                list_last_scratch[tmp['axis']] = tmp['direction']
+                if self.settings.playmode != playmode.gf:
+                    if tmp['direction'] != list_last_scratch[tmp['axis']]:
+                        self.list_density.append(cur_time)
+                    list_last_scratch[tmp['axis']] = tmp['direction']
 
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
@@ -465,25 +466,32 @@ class JoystickWebSocketServer:
         # TODO 切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
         
         if event.type == pygame.JOYAXISMOTION:
-            out_direction = -1
-            if self.pre_scr_val[event.axis] is not None:
-                if event.value > self.pre_scr_val[event.axis]:
-                    out_direction = 1
-                elif event.value < self.pre_scr_val[event.axis]:
-                    out_direction = 0
-            self.pre_scr_val[event.axis] = event.value
-            event_data = {
-                'type': 'axis',
-                'axis': event.axis,
-                'direction': out_direction,
-                'pos': event.axis*2 + out_direction,
-                'value': 1
-            }
-            if out_direction != self.pre_scr_direction[event.axis]:
-                self.today_notes += 1
-                self.root.after(0, self.update_counter_display)
-                self.event_queue.put({'type':'notes', 'value':self.today_notes})
-            self.pre_scr_direction[event.axis] = out_direction
+            if self.settings.playmode == playmode.gf:
+                event_data = {
+                    'type': 'axis',
+                    'axis': event.axis,
+                    'value': event.value
+                }
+            else:
+                out_direction = -1
+                if self.pre_scr_val[event.axis] is not None:
+                    if event.value > self.pre_scr_val[event.axis]:
+                        out_direction = 1
+                    elif event.value < self.pre_scr_val[event.axis]:
+                        out_direction = 0
+                self.pre_scr_val[event.axis] = event.value
+                event_data = {
+                    'type': 'axis',
+                    'axis': event.axis,
+                    'direction': out_direction,
+                    'pos': event.axis*2 + out_direction,
+                    'value': 1
+                }
+                if out_direction != self.pre_scr_direction[event.axis]:
+                    self.today_notes += 1
+                    self.root.after(0, self.update_counter_display)
+                    self.event_queue.put({'type':'notes', 'value':self.today_notes})
+                self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
             self.today_notes += 1
             self.root.after(0, self.update_counter_display)

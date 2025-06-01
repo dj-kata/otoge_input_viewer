@@ -1,0 +1,134 @@
+@charset "UTF-8";
+:root {
+    --port:8765;
+    --wailing-threshold: 3;
+}
+html{
+    height: 100%;
+}
+body { 
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.99);
+    margin: 0px;
+    padding: 0px;
+    font-family: 'RocknRoll One', sans-serif;
+    color:#aaddff;   
+    font-size:2px;
+    color: #fff;
+    text-shadow: 2px 2px 0 #000,
+                    -2px 2px 0 #000,
+                    2px -2px 0 #000,
+                    -2px -2px 0 #000;
+}
+.background{
+    height: 100%;
+    background-size: 100% 100%;
+    background-position: left top;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+}
+:root{
+    --num: 20;
+    --skip-no-update: 0; /* 1:更新のない行を飛ばす */
+}
+tr :nth-child(2){
+    height: 30px;
+}
+table#wailing{
+    border-spacing: 20px 0px;
+}
+table#ABCD{
+    border-spacing: 20px 10px;
+}
+table#wailing td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
+    color: #7fa;
+    font-size: 32px;
+    width: 700px;
+    height: 30px;
+    line-height: 1px;
+    margin-left: 30px;
+    text-align: center;
+    white-space: nowrap;
+}
+table#ABCD td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
+    color: #7fa;
+    font-size: 32px;
+    width: 80px;
+    height: 80px;
+    line-height: 1px;
+    text-align: center;
+    white-space: nowrap;
+}
+td.wailing{
+    background: #000000;
+    box-shadow: none;
+    border: 5px solid #cccccc;
+}
+td.btn{
+    background: #000000;
+    box-shadow: none;
+    border: 5px solid #cccccc;
+}
+table.info{
+    text-align: left;
+    font-size: 32px;
+    border-spacing: 0 0;
+    line-height: 2px;
+}
+table.info td:nth-child(1){
+    padding-left: 50px;
+    padding-right: 10px;
+}
+table.info td:nth-child(2){
+    text-align: right;
+    padding-right: 15px;
+}
+table.info td:nth-child(4){
+    padding-left: 50px;
+}
+.pick0{
+    border: 5px #cccccc solid;
+    background: #000000;
+    border-radius: 100% 100% 0% 0%;
+    box-shadow: 0 0 0 2px #cccccc;
+    color: #0000aa;
+    display: inline-block;
+    width: 150px;
+    height: 30px;
+    line-height: 3;
+    margin: 0px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: none;
+}
+.pick1 {
+    border: 5px #cccccc solid;
+    background: #000000;
+    border-radius: 0% 0% 100% 100%;
+    box-shadow: 0 0 0 2px #cccccc;
+    color: #0000aa;
+    display: inline-block;
+    width: 150px;
+    height: 30px;
+    line-height: 3;
+    margin: 0px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: none;
+}
+warning {
+    font-size: 60px;
+    color: red;
+}
+release {
+    color: #dff;
+}
+density {
+    color: #dff;
+}
+notes {
+    color: #ffeeee;
+}

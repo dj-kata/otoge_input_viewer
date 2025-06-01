@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>Otoge Input Viewer(IIDX 2P)</title>
+    <link rel="stylesheet" type="text/css" href="gf.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
+</head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+        var wailing_threshold = Number(getComputedStyle(document.documentElement).getPropertyValue('--wailing-threshold').trim());
+        var ws_url = 'ws://localhost:' + port
+        console.log(ws_url)
+        var ws = null;
+        const eventLog = document.getElementById('eventLog')
+        const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
+        var pushed_red = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #ff2277, 0 0 20px #ff2277, 0 0 10px #ff2277, 0 0 40px #ff2277, 0 0 60px #ff2277";
+        const not_pushed = "0 0 10px #fff"
+        var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
+
+        var axis_val = [0.0, 0.0, 0.0];
+        var axis_val_pre = [0.0, 0.0, 0.0];
+
+        function init() {
+            open();
+        }
+        function open() {
+            if (ws == null){
+                ws = new WebSocket(ws_url);
+                ws.onmessage = onMessage;
+                ws.onclose = onClose;
+                //ws.onerror = onError;
+                //ws.onopen = onOpen;
+            }
+        }
+
+        function onMessage(event) {
+            try {
+                const events = JSON.parse(event.data)
+                
+                // 単一イベントと配列の両方に対応
+                const processedEvents = Array.isArray(events) ? events : [events];
+                processedEvents.forEach(e => {
+                  $('warning').html('');
+                  //console.log(e)
+                  if (e.type == 'button'){ //// 鍵盤
+                    var btn = e.button+1
+                    if (e.state == 'down'){
+                        $('#btn'+btn).css('box-shadow', pushed)
+                        $('#btn'+btn).css('background', '#aaddff')
+                    }else{
+                        $('#btn'+btn).css('box-shadow', 'none')
+                        $('#btn'+btn).css('background', '#000000')
+                    }
+                  }else if (e.type == 'axis'){ //// つまみ
+                    axis_val[e.axis] = e.value;
+                  }else if (e.type == 'release'){
+                    $('release').html(e.value)
+                  }else if (e.type == 'release_eachkey'){
+                    var btn = e.button+1
+                    $('#btn'+btn).text(e.value)
+                  }else if (e.type == 'density'){
+                    $('density').html(e.value)
+                  }else if (e.type == 'notes'){
+                    $('notes').html(e.value)
+                  }
+                })
+            } catch (e) {
+                console.error('データ解析エラー:', e)
+            }
+        }
+        function onClose(event) {
+            console.log('切断されました')
+            $('warning').html('Not Connected!!');
+            ws = null;
+            setTimeout("open()", 3000);
+        }
+
+        function formatEvent(event) {
+            const date = new Date().toLocaleTimeString()
+            if (event.type === 'button') {
+                return `[${date}] ボタン ${event.button}: ${event.state}`
+            }
+            if (event.type === 'axis') {
+                return `[${date}] 軸 ${event.axis}: ${event.value.toFixed(2)}`
+            }
+            return `[${date}] 不明なイベント`
+        }
+
+        function clearLog() {
+            eventLog.innerHTML = ''
+        }
+        
+        function calc_wailing() {
+            var sum = 0.0;
+            for (i=0; i<3; i++){
+                sum += (axis_val_pre[i] - axis_val[i])*(axis_val_pre[i] - axis_val[i]);
+            }
+            console.log('sum='+sum);
+            if (sum >= wailing_threshold){
+                $('.wailing').css('box-shadow', pushed)
+                $('.wailing').css('background', '#aaddff')
+            }else{
+                $('.wailing').css('box-shadow', 'none')
+                $('.wailing').css('background', '#000000')
+            }
+
+            for (i=0; i<3; i++){
+                axis_val_pre[i] = axis_val[i];
+            }
+        }
+
+        $(init);
+        const c_wailing = setInterval(calc_wailing, 200);
+    </script>
+<body>
+    <div id="eventLog"></div>
+
+    <warning>Not Connected!!</warning>
+
+  <div class="background">
+    <table id="outer">
+        <tr>
+            <td colspan="2">
+                <table id="wailing">
+                    <tr><td class="wailing"></td></tr>
+                </table>
+            </td>
+        </tr>
+
+        <tr> <!-- ABCD -->
+            <td>
+                <table id="ABCD">
+                    <tr>
+                        <td id="btn4" class="btn"></td>
+                        <td id="btn3" class="btn"></td>
+                        <td id="btn2" class="btn"></td>
+                        <td id="btn1" class="btn"></td>
+                        <td id="btn0" class="btn"></td>
+                    </tr>
+                </table>
+            </td>
+            <td>
+                <table id="PICK">
+                    <tr>
+                        <td><div id="btn12" class="pick0"></div></td>
+                    </tr>
+                    <tr>
+                        <td><div id="btn11" class="pick1"></div></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <table class="info">
+        <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+        <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+    </table>
+  </div>
+
+</body>
+</html>
