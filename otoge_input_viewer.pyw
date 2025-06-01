@@ -442,10 +442,10 @@ class JoystickWebSocketServer:
                         logger.debug(event)
                     # モードごとに必要なノートのみ通すための判定処理
                     if event.type == pygame.JOYBUTTONDOWN:
-                        if not ((self.settings.playmode==playmode.iidx_sp and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6)):
+                        if not ((self.settings.playmode==playmode.iidx_sp and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6) or (self.settings.playmode==playmode.gf and event.button in (0,1,2,3,4,11,12))):
                             continue
                     if event.type == pygame.JOYAXISMOTION:
-                        if not ((self.settings.playmode==playmode.iidx_sp and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1))):
+                        if not ((self.settings.playmode==playmode.iidx_sp and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1)) or (self.settings.playmode==playmode.gf and event.axis in (0,1,2))):
                             continue
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
