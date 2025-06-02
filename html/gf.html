@@ -44,7 +44,7 @@
                   $('warning').html('');
                   //console.log(e)
                   if (e.type == 'button'){ //// 鍵盤
-                    var btn = e.button+1
+                    var btn = e.button
                     if (e.state == 'down'){
                         $('#btn'+btn).css('box-shadow', pushed)
                         $('#btn'+btn).css('background', '#aaddff')
@@ -57,7 +57,7 @@
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
                   }else if (e.type == 'release_eachkey'){
-                    var btn = e.button+1
+                    var btn = e.button
                     $('#btn'+btn).text(e.value)
                   }else if (e.type == 'density'){
                     $('density').html(e.value)

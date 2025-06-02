@@ -1,7 +1,7 @@
 @charset "UTF-8";
 :root {
     --port:8765;
-    --wailing-threshold: 3;
+    --wailing-threshold: 0.015;
 }
 html{
     height: 100%;
