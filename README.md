@@ -1,4 +1,4 @@
-# Otoge Input Viewer
+![image](https://github.com/user-attachments/assets/9317b45d-f86b-45ec-9082-1a74c74bed71)# Otoge Input Viewer
 IIDXコントローラ(PHOENIX WANなど)の入力可視化、リリース速度や入力密度の表示が行えるソフトウェアです。
 OBSへの設定をとても楽に行うことができます。  
 らぐ様の[打鍵ディスプレイツール](https://rag-oji.com/dakendisplay/)の影響を多大に受けていますが、
@@ -57,7 +57,8 @@ WebSocketのポート番号はデフォルトの8765で問題ないつもりで�
 
 
 ## デザインのカスタマイズ
-現状では、以下のような背景画像の設定のみ行うことができます。  
+### 背景画像を設定する
+以下のように背景画像を設定することができます。  
 <img src="https://github.com/user-attachments/assets/90ca18f6-c383-4c9c-98ec-b0709ff94226" width=500px>  
 
 以下の手順で設定できます。
@@ -77,6 +78,23 @@ rgba(0,0,0,0.65)の4つ目が不透明度で、この値が大きいほど暗く
 }
 ```
 ![image](https://github.com/user-attachments/assets/96d26157-6f8f-4046-9c75-170737ac9876)
+
+### 背景に色を付ける
+(CSSの初歩みたいな内容ですが、一応書いておきます。)  
+OBSでは、ブラウザソースにデフォルトで以下のようなカスタムCSSが設定されます。
+```
+body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
+```
+背景色が透明にされてしまい、配信画面が明るい場合には以下のようになってしまいます。  
+![image](https://github.com/user-attachments/assets/ae442104-ef29-466e-9e05-c0b884c9989f)  
+
+そこで、このプロパティを以下のように修正することで背景を暗くすることができます。
+```
+body { background-color: rgba(0, 0, 0, 0.85); margin: 0px auto; overflow: hidden; }
+```
+![image](https://github.com/user-attachments/assets/2fbbb24f-b032-466a-830f-ba86ecf7e224)
+
+```0,0,0```の部分を変更することで、黒以外の色に寄せることもできます。必要に応じて変えてみてください。
 
 # 対応状況など
 PHOENIXWAN 2022+でのみ動作確認しています。
