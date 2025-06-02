@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/9317b45d-f86b-45ec-9082-1a74c74bed71)# Otoge Input Viewer
+# Otoge Input Viewer
 IIDXコントローラ(PHOENIX WANなど)の入力可視化、リリース速度や入力密度の表示が行えるソフトウェアです。
 OBSへの設定をとても楽に行うことができます。  
 らぐ様の[打鍵ディスプレイツール](https://rag-oji.com/dakendisplay/)の影響を多大に受けていますが、
