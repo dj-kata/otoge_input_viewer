@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
     <title>Otoge Input Viewer(IIDX 2P)</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
     <link rel="stylesheet" type="text/css" href="iidx.css" />
     <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
 </head>
@@ -12,8 +13,6 @@
         console.log(ws_url)
         var ws = null;
         const eventLog = document.getElementById('eventLog')
-        const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
-        const not_pushed = "0 0 10px #fff"
         var last_scr_time = [new Date(), new Date()];
 
         function init() {
@@ -30,6 +29,18 @@
         }
 
         function onMessage(event) {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var color_push_inner = getComputedStyle(document.documentElement).getPropertyValue('--color-push-inner').trim();
+            var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
+            //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
+            var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-each-key').trim();
+            var pushed = "0 0 10px "+color_push_inner+", 0 0 10px "+color_push_inner+", 0 0 20px "+color_push_inner
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 20px ' + bg_on_main
+            pushed += ', 0 0 10px ' + bg_on_main
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 60px ' + bg_on_main
             try {
                 const events = JSON.parse(event.data)
                 
@@ -41,31 +52,33 @@
                     var btn = e.button+1
                     if (e.state == 'down'){
                         $('#btn'+btn).css('box-shadow', pushed)
-                        $('#btn'+btn).css('background', '#aaddff')
+                        $('#btn'+btn).css('background', bg_on_main)
                     }else{
                         $('#btn'+btn).css('box-shadow', 'none')
-                        $('#btn'+btn).css('background', '#000000')
+                        $('#btn'+btn).css('background', bg_off)
                     }
                   }else if (e.type == 'axis'){ //// 皿
                     var direction = ""
                     var direction_other = "" // 逆側
 
-                    direction = 1-e.pos
+                    direction = e.pos
                     last_scr_time[direction] = new Date();
                     if (e.value == 1){
                         $('.scr'+direction).css('box-shadow', pushed)
-                        $('.scr'+direction).css('background', '#aaddff')
+                        $('.scr'+direction).css('background', bg_on_main)
                         $('.scr'+(1-direction)).css('box-shadow', 'none')
-                        $('.scr'+(1-direction)).css('background', '#000000')
+                        $('.scr'+(1-direction)).css('background', bg_off)
                     }else{
                         $('.scr'+direction).css('box-shadow', 'none')
-                        $('.scr'+direction).css('background', '#000000')
+                        $('.scr'+direction).css('background', bg_off)
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
                   }else if (e.type == 'release_eachkey'){
-                    var btn = e.button+1
-                    $('#btn'+btn).text(e.value)
+                    if (disp_release_each_key == 1){
+                        var btn = e.button+1
+                        $('#btn'+btn).text(e.value)
+                    }
                   }else if (e.type == 'density'){
                     $('density').html(e.value)
                   }else if (e.type == 'notes'){
@@ -103,7 +116,7 @@
             for (i=0; i<2; i++){
                  if (cur-last_scr_time[i] > 200){
                     $('.scr'+i).css('box-shadow', 'none')
-                    $('.scr'+i).css('background', '#000000')
+                    $('.scr'+i).css('background', bg_off)
                  }
             }
         }

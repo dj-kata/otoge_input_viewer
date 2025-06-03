@@ -1,7 +1,4 @@
 @charset "UTF-8";
-:root {
-    --port:8765;
-}
 html{
     height: 100%;
 }
@@ -11,7 +8,7 @@ body {
     margin: 0px;
     padding: 0px;
     font-family: 'RocknRoll One', sans-serif;
-    color:#aaddff;   
+    color:rgb(170, 221, 255);   
     font-size:2px;
     color: #fff;
 }
@@ -41,9 +38,9 @@ table#disp td{
                     -1px -1px 0 #000;
 }
 td.btn{
-    background: #000000;
+    background: var(--bg-off);
     box-shadow: none;
-    border: 5px solid #cccccc;
+    border: var(--border-common);
     font-size: 26px;
 }
 table.info{
@@ -65,8 +62,8 @@ table.info :nth-child(4){
     padding-left: 50px;
 }
 .scr0{
-    background: #000000;
-    border: 5px #cccccc solid;
+    background: var(--bg-off);
+    border: var(--border-common);
     border-radius: 120px 120px 0% 0%;
     box-shadow: 0 0 0 5px #cccccc;
     color: #0000aa;
@@ -81,8 +78,8 @@ table.info :nth-child(4){
     box-shadow: none;
 }
 .scr1 {
-    border: 5px #cccccc solid;
-    background: #000000;
+    background: var(--bg-off);
+    border: var(--border-common);
     border-radius: 0% 0% 120px 120px;
     box-shadow: 0 0 0 5px #cccccc;
     color: #0000aa;
