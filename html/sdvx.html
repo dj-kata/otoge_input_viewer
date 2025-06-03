@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
     <title>Otoge Input Viewer(IIDX 2P)</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
     <link rel="stylesheet" type="text/css" href="sdvx.css" />
     <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
 </head>
@@ -12,9 +13,6 @@
         console.log(ws_url)
         var ws = null;
         const eventLog = document.getElementById('eventLog')
-        const pushed = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #228dff, 0 0 20px #228dff, 0 0 10px #228dff, 0 0 40px #228dff, 0 0 60px #228dff";
-        var pushed_red = "0 0 10px #fff, 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #ff2277, 0 0 20px #ff2277, 0 0 10px #ff2277, 0 0 40px #ff2277, 0 0 60px #ff2277";
-        const not_pushed = "0 0 10px #fff"
         var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
 
         function init() {
@@ -31,6 +29,23 @@
         }
 
         function onMessage(event) {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
+            var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
+            var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-each-key').trim();
+            var pushed_main = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed_main += ', 0 0 40px ' + bg_on_main
+            pushed_main += ', 0 0 20px ' + bg_on_main
+            pushed_main += ', 0 0 10px ' + bg_on_main
+            pushed_main += ', 0 0 40px ' + bg_on_main
+            pushed_main += ', 0 0 60px ' + bg_on_main
+            var pushed_sub = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed_sub += ', 0 0 40px ' + bg_on_sub
+            pushed_sub += ', 0 0 20px ' + bg_on_sub
+            pushed_sub += ', 0 0 10px ' + bg_on_sub
+            pushed_sub += ', 0 0 40px ' + bg_on_sub
+            pushed_sub += ', 0 0 60px ' + bg_on_sub
             try {
                 const events = JSON.parse(event.data)
                 
@@ -43,38 +58,40 @@
                     var btn = e.button+1
                     if (e.state == 'down'){
                         if (btn>=6){
-                            $('#btn'+btn).css('box-shadow', pushed_red)
-                            $('#btn'+btn).css('background', '#ff2277')
+                            $('#btn'+btn).css('box-shadow', pushed_sub)
+                            $('#btn'+btn).css('background', bg_on_sub)
                         }else{
-                            $('#btn'+btn).css('box-shadow', pushed)
-                            $('#btn'+btn).css('background', '#aaddff')
+                            $('#btn'+btn).css('box-shadow', pushed_main)
+                            $('#btn'+btn).css('background', bg_on_main)
                         }
                     }else{
                         $('#btn'+btn).css('box-shadow', 'none')
-                        $('#btn'+btn).css('background', '#000000')
+                        $('#btn'+btn).css('background', bg_off)
                     }
                   }else if (e.type == 'axis'){ //// つまみ
                     var direction = e.direction
                     last_scr_time[e.pos] = new Date();
                     if (e.value == 1){
                         if (e.pos < 2){
-                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed)
-                            $('#'+e.axis+'-'+direction).css('background', '#aaddff')
+                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed_main)
+                            $('#'+e.axis+'-'+direction).css('background', bg_on_main)
                         }else{
-                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed_red)
-                            $('#'+e.axis+'-'+direction).css('background', '#ff2277')
+                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed_sub)
+                            $('#'+e.axis+'-'+direction).css('background', bg_on_sub)
                         }
                         $('#'+e.axis+'-'+(1-direction)).css('box-shadow', 'none')
-                        $('#'+e.axis+'-'+(1-direction)).css('background', '#000000')
+                        $('#'+e.axis+'-'+(1-direction)).css('background', bg_off)
                     }else{
                         $('.tumami'+direction).css('box-shadow', 'none')
-                        $('.tumami'+direction).css('background', '#000000')
+                        $('.tumami'+direction).css('background', bg_off)
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
                   }else if (e.type == 'release_eachkey'){
-                    var btn = e.button+1
-                    $('#btn'+btn).text(e.value)
+                    if (disp_release_each_key == 1){
+                        var btn = e.button+1
+                        $('#btn'+btn).text(e.value)
+                    }
                   }else if (e.type == 'density'){
                     $('density').html(e.value)
                   }else if (e.type == 'notes'){
@@ -108,12 +125,13 @@
         }
         
         function stop_scratch() {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
             cur = new Date();
             for (j=0; j<2; j++){
                 for (i=0; i<2; i++){
                     if (cur-last_scr_time[j*2+i] > 200){
                        $('#'+j+'-'+i).css('box-shadow', 'none')
-                       $('#'+j+'-'+i).css('background', '#000000')
+                       $('#'+j+'-'+i).css('background', bg_off)
                     }
                 }
             }
