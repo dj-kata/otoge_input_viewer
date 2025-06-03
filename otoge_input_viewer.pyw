@@ -12,7 +12,7 @@ import json
 import time
 from collections import defaultdict
 import logging, logging.handlers
-from settings import Settings, playmode
+from settings import Settings, playmode, SettingsDialog
 from tooltip import ToolTip
 import subprocess
 from bs4 import BeautifulSoup
@@ -39,120 +39,6 @@ try:
 except Exception:
     SWVER = "v?.?.?"
 
-class SettingsDialog(tk.Toplevel):
-    def __init__(self, parent, settings:Settings):
-        super().__init__(parent)
-        self.title("設定")
-        self.settings = settings
-        self.result = None
-        self.grab_set() # メインウィンドウの操作禁止
-        
-        self.create_widgets()
-        self.load_current_settings()
-
-        lx = parent.winfo_x()
-        ly = parent.winfo_y()
-        super().geometry(f'+{lx}+{ly}')
-        super().protocol('WM_DELETE_WINDOW', self.save)
-
-    def create_widgets(self):
-        frame_mode = ttk.Frame(self)
-        frame_mode.pack(padx=0, pady=0)
-
-        self.playmode_radios = []
-        self.playmode_var = tk.IntVar()
-        ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
-        for i in range(len(playmode.get_names())):
-            #if playmode(i) in (playmode.iidx_dp, playmode.sdvx):
-            if playmode(i) in (playmode.iidx_dp,):
-                self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i], state='disable'))
-            else:
-                self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
-            self.playmode_radios[i].pack(side=tk.LEFT, padx=5, pady=5)
-
-        frame = ttk.Frame(self, padding=0)
-        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5)
-
-        ttk.Label(frame, text="LongNotes判定しきい値(ms) (default=225):").grid(row=0, column=0, sticky=tk.W)
-        self.ln_threshold = ttk.Entry(frame)
-        self.ln_threshold.grid(row=0, column=1, sticky=tk.W)
-
-        ttk.Label(frame, text="リリース速度計算用ノーツ数 (default=200):").grid(row=2, column=0, sticky=tk.W)
-        self.size_release_hist_entry = ttk.Entry(frame)
-        self.size_release_hist_entry.grid(row=2, column=1, padx=5, pady=5)
-
-        ttk.Label(frame, text="単鍵リリース速度計算用ノーツ数 (default=30)").grid(row=3, column=0, sticky=tk.W)
-        self.size_release_key_hist_entry = ttk.Entry(frame)
-        self.size_release_key_hist_entry.grid(row=3, column=1, padx=5, pady=5)
-
-        ttk.Label(frame, text="譜面密度計算周期(s) (default=0.5)").grid(row=4, column=0, sticky=tk.W)
-        self.density_interval_entry = ttk.Entry(frame)
-        self.density_interval_entry.grid(row=4, column=1, padx=5, pady=5)
-
-        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=5, column=0, sticky=tk.W)
-        self.port_entry = ttk.Entry(frame)
-        self.port_entry.grid(row=5, column=1, padx=5, pady=5)
-        ToolTip(self.port_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
-
-        self.debug_mode_var = tk.BooleanVar()
-        self.debug_mode_check = ttk.Checkbutton(
-            frame,
-            text='debug_mode (default=off)',
-            variable=self.debug_mode_var
-        )
-        self.debug_mode_check.grid(row=6, column=0, columnspan=2, pady=5, sticky=tk.W)
-
-        self.auto_update_var = tk.BooleanVar()
-        self.auto_update_check = ttk.Checkbutton(
-            frame,
-            text='起動時にアプリを自動更新する (default=on)',
-            variable=self.auto_update_var
-        )
-        self.auto_update_check.grid(row=7, column=0, columnspan=2, pady=5, sticky=tk.W)
-
-    def load_current_settings(self):
-        self.ln_threshold.insert(0, str(self.settings.ln_threshold))
-        self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
-        self.size_release_key_hist_entry.insert(0, str(self.settings.size_release_key_hist))
-        self.density_interval_entry.insert(0, str(self.settings.density_interval))
-        self.port_entry.insert(0, str(self.settings.port))
-        self.debug_mode_var.set(self.settings.debug_mode)
-        self.auto_update_var.set(self.settings.auto_update)
-        self.playmode_var.set(self.settings.playmode.value)
-
-    def save(self):
-        """設定値をファイルに保存
-        """
-        try:
-            port = int(self.port_entry.get())
-            ln_threshold = int(self.ln_threshold.get())
-            size_release_hist = int(self.size_release_hist_entry.get())
-            size_release_key_hist = int(self.size_release_key_hist_entry.get())
-            density_interval = float(self.density_interval_entry.get())
-            if not (1 <= port <= 65535):
-                raise ValueError("ポート番号が無効です")
-            if not (ln_threshold > 0):
-                raise ValueError("LongNotes判定しきい値が無効です")
-            if not (density_interval > 0):
-                raise ValueError("譜面密度計算周期が無効です")
-            if not (size_release_hist > 0):
-                raise ValueError("リリース速度計算用ノーツ数が無効です")
-            if not (size_release_key_hist > 0):
-                raise ValueError("単鍵リリース速度計算用ノーツ数が無効です")
-            self.settings.port = port
-            self.settings.ln_threshold = ln_threshold
-            self.settings.size_release_hist = size_release_hist
-            self.settings.size_release_key_hist = size_release_key_hist
-            self.settings.density_interval = density_interval
-            self.settings.debug_mode = self.debug_mode_var.get()
-            self.settings.auto_update = self.auto_update_var.get()
-            self.settings.playmode = playmode(self.playmode_var.get())
-            self.settings.save()
-            with open('html/websocket.css', 'w', encoding='utf-8') as f:
-                f.write(':root {\n    --port:'+str(port)+';\n}')
-            self.destroy()
-        except ValueError as e:
-            messagebox.showerror("入力エラー", str(e))
 
 class JoystickWebSocketServer:
     def __init__(self, root):
@@ -598,7 +484,6 @@ class JoystickWebSocketServer:
                 time.sleep(0.3)
             self.loop.close()
         
-        print('a')
         self.running = True
         self.server_thread = threading.Thread(
             target=self.run_websocket_server,
