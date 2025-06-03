@@ -30,12 +30,12 @@
 
         function onMessage(event) {
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
-            var color_push_inner = getComputedStyle(document.documentElement).getPropertyValue('--color-push-inner').trim();
+            var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
             //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
             var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
             var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-each-key').trim();
-            var pushed = "0 0 10px "+color_push_inner+", 0 0 10px "+color_push_inner+", 0 0 20px "+color_push_inner
+            var pushed = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
             pushed += ', 0 0 40px ' + bg_on_main
             pushed += ', 0 0 20px ' + bg_on_main
             pushed += ', 0 0 10px ' + bg_on_main
@@ -112,6 +112,7 @@
         }
         
         function stop_scratch() {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
             cur = new Date();
             for (i=0; i<2; i++){
                  if (cur-last_scr_time[i] > 200){
