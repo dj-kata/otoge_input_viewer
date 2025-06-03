@@ -1,6 +1,7 @@
 @charset "UTF-8";
 :root {
     --port:8765;
+    --release-eachkey:1;
 }
 html{
     height: 100%;
@@ -57,19 +58,19 @@ table#LR td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイ�
     text-align: center;
 }
 td.btn{
-    background: #000000;
+    background: var(--bg-off);
     box-shadow: none;
-    border: 5px solid #cccccc;
+    border: var(--border-common);
 }
 td.btn-u{
-    background: #000000;
+    background: var(--bg-off);
     box-shadow: none;
-    border: 5px solid #cccccc;
+    border: var(--border-common);
 }
 td.btn-d{
-    background: #000000;
+    background: var(--bg-off);
     box-shadow: none;
-    border: 5px solid #cccccc;
+    border: var(--border-common);
 }
 table.info{
     text-align: left;
@@ -89,8 +90,8 @@ table.info td:nth-child(4){
     padding-left: 50px;
 }
 .tumami0{
-    background: #000000;
-    border: 5px #cccccc solid;
+    background: var(--bg-off);
+    border: var(--border-common);
     border-radius: 70% 0% 0% 70%;
     box-shadow: 0 0 0 2px #cccccc;
     color: #0000aa;
@@ -105,8 +106,8 @@ table.info td:nth-child(4){
     box-shadow: none;
 }
 .tumami1 {
-    border: 5px #cccccc solid;
-    background: #000000;
+    background: var(--bg-off);
+    border: var(--border-common);
     border-radius: 0 100% 100% 0;
     box-shadow: 0 0 0 2px #cccccc;
     color: #0000aa;
