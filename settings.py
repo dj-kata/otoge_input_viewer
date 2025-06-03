@@ -19,6 +19,7 @@ class Settings:
         self.size_release_hist = 200
         self.size_release_key_hist = 30
         self.density_interval = 0.5
+        self.host = 'localhost'
         self.port = 8765
         self.connected_idx = None
         self.debug_mode = False # コントローラ入力の全dumpなど
@@ -33,6 +34,7 @@ class Settings:
     def disp(self):
         print(f"lx, ly = {self.lx}, {self.ly}")
         print(f"ln_threshold={self.ln_threshold}")
+        print(f"host:port = {self.host}:{self.port}")
         print(f"size_release_hist={self.size_release_hist}")
         print(f"size_release_key_hist={self.size_release_key_hist}")
         print(f"density_interval={self.density_interval}")
