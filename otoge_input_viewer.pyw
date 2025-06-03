@@ -224,6 +224,7 @@ class JoystickWebSocketServer:
         settings_menu = tk.Menu(self.menubar, tearoff=0)
         settings_menu.add_command(label="config", command=self.open_settings_dialog)
         settings_menu.add_command(label="update", command=lambda:self.check_updates(True))
+        settings_menu.add_command(label="reset counter", command=self.reset_counter)
         self.menubar.add_cascade(label="file", menu=settings_menu)
 
         main_frame = ttk.Frame(self.root, padding=6)
@@ -512,6 +513,10 @@ class JoystickWebSocketServer:
         if event_data:
             self.calc_queue.put(event_data)
             self.event_queue.put(event_data)
+
+    def reset_counter(self):
+        self.today_notes = 0
+        self.counter_label.config(text=f"notes: {self.today_notes}")
 
     def update_counter_display(self):
         self.counter_label.config(text=f"notes: {self.today_notes}")
