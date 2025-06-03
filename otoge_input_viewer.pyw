@@ -164,7 +164,9 @@ class JoystickWebSocketServer:
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
         self.running = False
         self.clients = set()
-        self.today_notes = 0
+        self.today_notes  = 0 # 合計
+        self.today_keys   = 0 # 鍵盤部分
+        self.today_others = 0 # スクラッチとかツマミとかピックとか
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
@@ -482,11 +484,13 @@ class JoystickWebSocketServer:
             }
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.today_notes += 1
+                self.today_others += 1
                 self.root.after(0, self.update_counter_display)
                 self.event_queue.put({'type':'notes', 'value':self.today_notes})
             self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
             self.today_notes += 1
+            self.today_keys += 1
             self.root.after(0, self.update_counter_display)
             self.event_queue.put({'type':'notes', 'value':self.today_notes})
             event_data = {
@@ -516,10 +520,15 @@ class JoystickWebSocketServer:
 
     def reset_counter(self):
         self.today_notes = 0
+        self.today_keys = 0
+        self.today_others = 0
         self.counter_label.config(text=f"notes: {self.today_notes}")
 
     def update_counter_display(self):
-        self.counter_label.config(text=f"notes: {self.today_notes}")
+        if self.settings.playmode == playmode.sdvx:
+            self.counter_label.config(text=f"notes: {self.today_notes} (key: {self.today_keys} + vol: {self.today_others})")
+        else: # 1p or 2p
+            self.counter_label.config(text=f"notes: {self.today_notes} (key: {self.today_keys} + scr: {self.today_others})")
 
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
