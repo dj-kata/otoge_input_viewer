@@ -115,12 +115,12 @@ class JoystickWebSocketServer:
         settings_menu.add_command(label="reset counter", command=self.reset_counter)
         self.menubar.add_cascade(label="file", menu=settings_menu)
 
-        main_frame = ttk.Frame(self.root, padding=6)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        ctr_frame = ttk.Frame(self.root)
+        ctr_frame.pack(padx=5, pady=0)
 
         # ジョイパッド情報
         self.joystick_info = ttk.Label(
-            main_frame,
+            ctr_frame,
             text="接続ジョイパッド: なし",
             font=("Meiryo UI", 10)
         )
@@ -128,15 +128,36 @@ class JoystickWebSocketServer:
 
         # コントローラ変更ボタン
         self.change_joystick_btn = ttk.Button(
-            main_frame,
+            ctr_frame,
             text="change",
             command=self.change_joystick,
         )
         self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
 
+        # ジョイパッド情報
+        self.joystick_info2 = ttk.Label(
+            ctr_frame,
+            text="接続ジョイパッド: なし",
+            font=("Meiryo UI", 10)
+        )
+        self.joystick_info2.grid(row=1, column=0,sticky=tk.W)
+
+        # コントローラ変更ボタン
+        self.change_joystick_btn2 = ttk.Button(
+            ctr_frame,
+            text="change",
+            command=self.change_joystick,
+        )
+        self.change_joystick_btn2.grid(row=1, column=1,sticky=tk.W)
+        if self.settings.playmode != playmode.iidx_dp:
+            self.change_joystick_btn2.config(state='disable')
+
+        main_frame = ttk.Frame(self.root, padding=6)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
         # モード表示
         self.mode_label = ttk.Label(main_frame, text=f'mode: {self.settings.playmode.name}', font=('Meiryo UI', 10))
-        self.mode_label.grid(row=1, sticky=tk.W)
+        self.mode_label.grid(row=0, sticky=tk.W)
 
         # ボタンカウンター
         self.counter_label = ttk.Label(
@@ -144,7 +165,7 @@ class JoystickWebSocketServer:
             text="notes: 0",
             font=("Meiryo UI", 10)
         )
-        self.counter_label.grid(row=2, sticky=tk.W)
+        self.counter_label.grid(row=1, sticky=tk.W)
 
         # サーバー状態表示
         self.server_status = ttk.Label(
@@ -152,7 +173,7 @@ class JoystickWebSocketServer:
             text=f"WebSocket port: {self.settings.port}",
             font=("Meiryo UI", 10)
         )
-        self.server_status.grid(row=3, sticky=tk.W)
+        self.server_status.grid(row=2, sticky=tk.W)
 
         # その他情報表示
         self.other_info = ttk.Label(
@@ -160,7 +181,7 @@ class JoystickWebSocketServer:
             text=f"",
             font=("Meiryo UI", 10)
         )
-        self.other_info.grid(row=4, sticky=tk.W)
+        self.other_info.grid(row=3, sticky=tk.W)
 
     def start_monitor(self):
         # ジョイパッド監視スレッド
@@ -203,6 +224,10 @@ class JoystickWebSocketServer:
         self.settings.load()
         self.settings.disp()
         self.update_server_status_display()
+        if self.settings.playmode == playmode.iidx_dp:
+            self.change_joystick_btn2.config(state='enable')
+        else:
+            self.change_joystick_btn2.config(state='disable')
         self.toggle_server()
 
     def change_joystick(self):
