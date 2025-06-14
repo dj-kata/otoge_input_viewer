@@ -8,8 +8,9 @@
 </head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
+        var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
         var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
-        var ws_url = 'ws://localhost:' + port
+        var ws_url = 'ws://' + host + ':' + port
         console.log(ws_url)
         var ws = null;
         const eventLog = document.getElementById('eventLog')

@@ -1,9 +1,11 @@
 @charset "UTF-8";
 :root {
+    /* WebSocketのhost。処理タイミングの兼ね合いでこちらはアプリ側から変更する仕様 */
+    --host:"localhost";
     /* WebSocketポート番号。処理タイミングの兼ね合いでこちらはアプリ側から変更する仕様 */
     --port:8765;
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
-    --border-common: #ccc solid;
+    --border-common: #ccc solid 5px;
     /* 鍵盤ごとリリース速度表示のon/off */
     --disp-release-each-key:1;
     /* 鍵盤を押していないときの背景色 */
