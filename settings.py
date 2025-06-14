@@ -25,8 +25,7 @@ class Settings:
         self.density_interval = 0.5
         self.host = 'localhost'
         self.port = 8765
-        self.connected_idx = None
-        self.connected_idx2 = None # dp用
+        self.connected_idx = [None,None]
         self.debug_mode = False # コントローラ入力の全dumpなど
         self.auto_update = True # 自動アップデート
         self.playmode = playmode.iidx_sp
@@ -53,9 +52,14 @@ class Settings:
             with open(savefile, 'rb') as f:
                 tmp = pickle.load(f)
                 for k in tmp.__dict__.keys():
-                    setattr(self, k, getattr(tmp, k))
+                    if k == 'connected_idx' and type(getattr(tmp, k)) is not list:
+                        print(f'connected_idxをListに変更します')
+                        setattr(self, k, [None, None])
+                    else:
+                        setattr(self, k, getattr(tmp, k))
         except Exception: # 読み込みエラー時はデフォルトで使う
             pass
+        self.disp()
 
     def save(self):
         with open(savefile, 'wb') as f:
