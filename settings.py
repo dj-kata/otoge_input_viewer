@@ -3,6 +3,7 @@ from enum import Enum
 import tkinter as tk
 from tooltip import ToolTip
 from tkinter import ttk, simpledialog, messagebox
+import ipaddress
 savefile = 'oiv_conf.pkl'
 
 class playmode(Enum):
@@ -25,6 +26,7 @@ class Settings:
         self.host = 'localhost'
         self.port = 8765
         self.connected_idx = None
+        self.connected_idx2 = None # dp用
         self.debug_mode = False # コントローラ入力の全dumpなど
         self.auto_update = True # 自動アップデート
         self.playmode = playmode.iidx_sp
@@ -105,9 +107,14 @@ class SettingsDialog(tk.Toplevel):
         self.density_interval_entry = ttk.Entry(frame)
         self.density_interval_entry.grid(row=4, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=5, column=0, sticky=tk.W)
+        ttk.Label(frame, text="WebSocketホスト: (default=localhost)").grid(row=5, column=0, sticky=tk.W)
+        self.host_entry = ttk.Entry(frame)
+        self.host_entry.grid(row=5, column=1, padx=5, pady=5)
+        ToolTip(self.host_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
+
+        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=6, column=0, sticky=tk.W)
         self.port_entry = ttk.Entry(frame)
-        self.port_entry.grid(row=5, column=1, padx=5, pady=5)
+        self.port_entry.grid(row=6, column=1, padx=5, pady=5)
         ToolTip(self.port_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
 
         self.debug_mode_var = tk.BooleanVar()
@@ -116,7 +123,7 @@ class SettingsDialog(tk.Toplevel):
             text='debug_mode (default=off)',
             variable=self.debug_mode_var
         )
-        self.debug_mode_check.grid(row=6, column=0, columnspan=2, pady=5, sticky=tk.W)
+        self.debug_mode_check.grid(row=7, column=0, columnspan=2, pady=5, sticky=tk.W)
 
         self.auto_update_var = tk.BooleanVar()
         self.auto_update_check = ttk.Checkbutton(
@@ -124,27 +131,38 @@ class SettingsDialog(tk.Toplevel):
             text='起動時にアプリを自動更新する (default=on)',
             variable=self.auto_update_var
         )
-        self.auto_update_check.grid(row=7, column=0, columnspan=2, pady=5, sticky=tk.W)
+        self.auto_update_check.grid(row=8, column=0, columnspan=2, pady=5, sticky=tk.W)
 
     def load_current_settings(self):
         self.ln_threshold.insert(0, str(self.settings.ln_threshold))
         self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
         self.size_release_key_hist_entry.insert(0, str(self.settings.size_release_key_hist))
         self.density_interval_entry.insert(0, str(self.settings.density_interval))
+        self.host_entry.insert(0, str(self.settings.host))
         self.port_entry.insert(0, str(self.settings.port))
         self.debug_mode_var.set(self.settings.debug_mode)
         self.auto_update_var.set(self.settings.auto_update)
         self.playmode_var.set(self.settings.playmode.value)
 
+    def is_valid_ip(self, address):
+        try:
+            ipaddress.ip_address(address)
+            return True
+        except ValueError:
+            return False
+
     def save(self):
         """設定値をファイルに保存
         """
         try:
+            host = self.host_entry.get()
             port = int(self.port_entry.get())
             ln_threshold = int(self.ln_threshold.get())
             size_release_hist = int(self.size_release_hist_entry.get())
             size_release_key_hist = int(self.size_release_key_hist_entry.get())
             density_interval = float(self.density_interval_entry.get())
+            if (host != 'localhost') and (not self.is_valid_ip(host)):
+                raise ValueError("hostが無効です")
             if not (1 <= port <= 65535):
                 raise ValueError("ポート番号が無効です")
             if not (ln_threshold > 0):
@@ -155,6 +173,7 @@ class SettingsDialog(tk.Toplevel):
                 raise ValueError("リリース速度計算用ノーツ数が無効です")
             if not (size_release_key_hist > 0):
                 raise ValueError("単鍵リリース速度計算用ノーツ数が無効です")
+            self.settings.host = host
             self.settings.port = port
             self.settings.ln_threshold = ln_threshold
             self.settings.size_release_hist = size_release_hist
@@ -165,7 +184,10 @@ class SettingsDialog(tk.Toplevel):
             self.settings.playmode = playmode(self.playmode_var.get())
             self.settings.save()
             with open('html/websocket.css', 'w', encoding='utf-8') as f:
-                f.write(':root {\n    --port:'+str(port)+';\n}')
+                f.write(':root {\n')
+                f.write('    --host:'+host+';\n')
+                f.write('    --port:'+str(port)+';\n')
+                f.write('}')
             self.destroy()
         except ValueError as e:
             messagebox.showerror("入力エラー", str(e))

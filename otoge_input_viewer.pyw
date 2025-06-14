@@ -126,11 +126,11 @@ class JoystickWebSocketServer:
         )
         self.joystick_info.grid(row=0, column=0,sticky=tk.W)
 
-        # コントローラ変更ボタン
+        # コントローラ変更ボタン1
         self.change_joystick_btn = ttk.Button(
             ctr_frame,
             text="change",
-            command=self.change_joystick,
+            command=lambda:self.change_joystick(0),
         )
         self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
 
@@ -142,11 +142,11 @@ class JoystickWebSocketServer:
         )
         self.joystick_info2.grid(row=1, column=0,sticky=tk.W)
 
-        # コントローラ変更ボタン
+        # コントローラ変更ボタン2
         self.change_joystick_btn2 = ttk.Button(
             ctr_frame,
             text="change",
-            command=self.change_joystick,
+            command=lambda:self.change_joystick(1),
         )
         self.change_joystick_btn2.grid(row=1, column=1,sticky=tk.W)
         if self.settings.playmode != playmode.iidx_dp:
@@ -230,20 +230,30 @@ class JoystickWebSocketServer:
             self.change_joystick_btn2.config(state='disable')
         self.toggle_server()
 
-    def change_joystick(self):
+    def change_joystick(self, controller_pos:int):
+        """検出するジョイパッドを変更する
+
+        Args:
+            controller_pos (int): DP時に使うコントローラ0,1のどちらを変更するか
+        """
+        cidx = [self.settings.connected_idx, self.settings.connected_idx2]
         count = pygame.joystick.get_count()
         print('count=', count)
         if count < 1:
             return
         else:
-            if (self.settings.connected_idx is None) or (not hasattr(self, 'joystick')):
-                self.reconnect_joystick(0)
+            if (cidx[controller_pos] is None) or (not hasattr(self, 'joystick')):
+                self.reconnect_joystick(controller_pos, 0)
             else:
                 idx = (self.joystick.get_id() + 1) % count
-                self.reconnect_joystick(idx)
+                self.reconnect_joystick(controller_pos, idx)
 
-    def reconnect_joystick(self, idx:int):
-        """ジョイパッドへの再接続処理。
+    def reconnect_joystick(self, controller_pos:int=0, idx:int=0):
+        """コントローラへの再接続処理。
+
+        Args:
+            controller_pos (int): 0,1のどちらのコントローラか
+            idx (int): idx番のジョイパッドに接続
         """
         try:
             self.joystick = pygame.joystick.Joystick(idx)
@@ -265,6 +275,7 @@ class JoystickWebSocketServer:
             elif self.settings.connected_idx is None:
                 self.reconnect_joystick(0)
             else:
+                print(min(self.settings.connected_idx, count-1),)
                 self.reconnect_joystick(min(self.settings.connected_idx, count-1))
             self.change_joystick_btn.config(state=tk.NORMAL)
         except pygame.error as e:
@@ -416,7 +427,7 @@ class JoystickWebSocketServer:
                 'state': 'up'
             }
         elif event.type == pygame.JOYDEVICEADDED:
-            if self.joystick.get_count() == 1:
+            if pygame.joystick.get_count() == 1:
                 self.reconnect_joystick(0)
         elif event.type == pygame.JOYDEVICEREMOVED:
             if self.joystick.get_instance_id() == event.instance_id:
@@ -493,7 +504,7 @@ class JoystickWebSocketServer:
     async def main_server(self):
         async with websockets.serve(
             self.websocket_handler,
-            "0.0.0.0",
+            '0.0.0.0',
             self.settings.port
         ):
             await self.send_joystick_events()
