@@ -59,6 +59,8 @@ class JoystickWebSocketServer:
         self.list_density = []
         self.settings = Settings()
 
+        self.joystick = [None, None]
+
         self.root.geometry(f'+{self.settings.lx}+{self.settings.ly}')
 
         self.setup_gui()
@@ -119,12 +121,13 @@ class JoystickWebSocketServer:
         ctr_frame.pack(padx=5, pady=0)
 
         # ジョイパッド情報
-        self.joystick_info = ttk.Label(
+        self.joystick_info = []
+        self.joystick_info.append(ttk.Label(
             ctr_frame,
             text="接続ジョイパッド: なし",
             font=("Meiryo UI", 10)
-        )
-        self.joystick_info.grid(row=0, column=0,sticky=tk.W)
+        ))
+        self.joystick_info[0].grid(row=0, column=0,sticky=tk.W)
 
         # コントローラ変更ボタン1
         self.change_joystick_btn = ttk.Button(
@@ -135,12 +138,12 @@ class JoystickWebSocketServer:
         self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
 
         # ジョイパッド情報
-        self.joystick_info2 = ttk.Label(
+        self.joystick_info.append(ttk.Label(
             ctr_frame,
             text="接続ジョイパッド: なし",
             font=("Meiryo UI", 10)
-        )
-        self.joystick_info2.grid(row=1, column=0,sticky=tk.W)
+        ))
+        self.joystick_info[1].grid(row=1, column=0,sticky=tk.W)
 
         # コントローラ変更ボタン2
         self.change_joystick_btn2 = ttk.Button(
@@ -236,17 +239,29 @@ class JoystickWebSocketServer:
         Args:
             controller_pos (int): DP時に使うコントローラ0,1のどちらを変更するか
         """
-        cidx = [self.settings.connected_idx, self.settings.connected_idx2]
         count = pygame.joystick.get_count()
-        print('count=', count)
+        logger.debug(f'pos={controller_pos}, count={count}')
         if count < 1:
             return
         else:
-            if (cidx[controller_pos] is None) or (not hasattr(self, 'joystick')):
-                self.reconnect_joystick(controller_pos, 0)
+            if count == 1:
+                if self.settings.playmode != playmode.iidx_dp:
+                    if (self.settings.connected_idx[controller_pos] is None) or (self.joystick[controller_pos] is None):
+                        self.reconnect_joystick(controller_pos, 0)
+                else: # コントローラ1つの場合、どちらもNoneなら0に繋ぐ、どちらかにつながっている場合は反対に繋ぐ
+                    if self.settings.connected_idx[1-controller_pos] is not None:
+                        if self.joystick[1-controller_pos] is not None:
+                            self.joystick[1-controller_pos].quit()
+                        self.joystick[1-controller_pos] = None
+                        self.joystick_info[1-controller_pos].config(text=f"joypad disconnected", foreground='red')
+                        self.settings.connected_idx[1-controller_pos] = None
+                    self.reconnect_joystick(controller_pos, 0)
+
             else:
-                idx = (self.joystick.get_id() + 1) % count
+                idx = (self.joystick[controller_pos].get_id() + 1) % count
                 self.reconnect_joystick(controller_pos, idx)
+        logger.debug(f'self.joystick = {self.joystick}')
+
 
     def reconnect_joystick(self, controller_pos:int=0, idx:int=0):
         """コントローラへの再接続処理。
@@ -256,31 +271,31 @@ class JoystickWebSocketServer:
             idx (int): idx番のジョイパッドに接続
         """
         try:
-            self.joystick = pygame.joystick.Joystick(idx)
-            self.joystick.init()
-            name = self.joystick.get_name()
-            self.joystick_info.config(text=f"connected: {name} (ID: {idx})", foreground='blue')
-            self.settings.connected_idx = idx
+            self.joystick[controller_pos] = pygame.joystick.Joystick(idx)
+            self.joystick[controller_pos].init()
+            name = self.joystick[controller_pos].get_name()
+            self.joystick_info[controller_pos].config(text=f"connected: {name} (ID: {idx})", foreground='blue')
+            self.settings.connected_idx[controller_pos] = idx
         except pygame.error as e:
             logger.error(f"ジョイパッド接続エラー: {e}")
 
     def init_pygame(self):
-        try:
-            pygame.init()
-            pygame.joystick.init()
-            count = pygame.joystick.get_count()
-            if count == 0:
-                raise pygame.error("No joystick detected")
-            
-            elif self.settings.connected_idx is None:
-                self.reconnect_joystick(0)
-            else:
-                print(min(self.settings.connected_idx, count-1),)
-                self.reconnect_joystick(min(self.settings.connected_idx, count-1))
-            self.change_joystick_btn.config(state=tk.NORMAL)
-        except pygame.error as e:
-            logger.error(e)
-            self.joystick_info.config(text=str(e), foreground="red")
+        pygame.init()
+        pygame.joystick.init()
+        count = pygame.joystick.get_count()
+        logger.debug(f"count={count}, connected_idx={self.settings.connected_idx}")
+        for controller_pos in range(2):
+            try:
+                if count == 0:
+                    logger.debug('No joystick detected')
+                else: # コントローラが接続されている
+                    if self.settings.connected_idx[controller_pos] is not None:
+                        self.reconnect_joystick(controller_pos)
+                        logger.debug(f'pos{controller_pos} connected')
+                self.change_joystick_btn.config(state=tk.NORMAL)
+            except pygame.error as e:
+                logger.error(e)
+                self.joystick_info[controller_pos].config(text=str(e), foreground="red")
 
     def thread_density(self):
         """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
@@ -374,7 +389,8 @@ class JoystickWebSocketServer:
                             continue
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
-                    self.joystick_info.config(text=f"joypad disconnected", foreground='red')
+                    for i in range(2):
+                        self.joystick_info[0].config(text=f"joypad disconnected", foreground='red')
             except Exception as e:
                 logger.debug(e)
             pygame.time.wait(20)
@@ -427,12 +443,19 @@ class JoystickWebSocketServer:
                 'state': 'up'
             }
         elif event.type == pygame.JOYDEVICEADDED:
-            if pygame.joystick.get_count() == 1:
-                self.reconnect_joystick(0)
+            if self.settings.playmode != playmode.iidx_dp:
+                if pygame.joystick.get_count() == 1:
+                    self.reconnect_joystick(0)
+            else:
+                if pygame.joystick.get_count() == 2:
+                    for i in range(2):
+                        if self.joystick[i] is None:
+                            self.reconnect_joystick(i)
         elif event.type == pygame.JOYDEVICEREMOVED:
-            if self.joystick.get_instance_id() == event.instance_id:
-                self.settings.connected_idx = None
-                self.joystick_info.config(text=f"joypad disconnected", foreground='red')
+            for i in range(2):
+                if self.joystick[i].get_instance_id() == event.instance_id:
+                    self.settings.connected_idx[i] = None
+                    self.joystick_info[i].config(text=f"joypad disconnected", foreground='red')
             if self.joystick.get_count() > 0:
                 self.reconnect_joystick(0)
         
