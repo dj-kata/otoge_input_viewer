@@ -116,8 +116,8 @@ class JoystickWebSocketServer:
         """
         uptime = time.perf_counter() - self.time_start
         uptime_h = int(uptime//3600)
-        uptime_m = int((uptime - uptime_h)//60)
-        uptime_s = int((uptime-uptime_h-uptime_m))
+        uptime_m = int((uptime - uptime_h*3600)//60)
+        uptime_s = int((uptime-uptime_h*3600-uptime_m*60))
         uptime_str = f"{uptime_h:02d}:{uptime_m:02d}:{uptime_s:02d}"
         return uptime_str
 
