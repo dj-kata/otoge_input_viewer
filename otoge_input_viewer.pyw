@@ -18,6 +18,8 @@ import subprocess
 from bs4 import BeautifulSoup
 import requests
 import traceback
+import urllib
+import webbrowser
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -42,6 +44,7 @@ except Exception:
 
 class JoystickWebSocketServer:
     def __init__(self, root):
+        self.time_start = time.perf_counter()
         self.root = root
         self.root.title("Otoge Input Viewer")
         self.root.iconbitmap(default='icon.ico')
@@ -105,6 +108,32 @@ class JoystickWebSocketServer:
             if always_disp_dialog:
                 messagebox.showinfo("Otoge Input Viewer", f'お使いのバージョンは最新です({SWVER})')
 
+    def get_uptime(self):
+        """アプリの起起動時を文字列として返す
+
+        Returns:
+            str: HH:MM:SS形式の文字列
+        """
+        uptime = time.perf_counter() - self.time_start
+        uptime_h = int(uptime//3600)
+        uptime_m = int((uptime - uptime_h)//60)
+        uptime_s = int((uptime-uptime_h-uptime_m))
+        uptime_str = f"{uptime_h:02d}:{uptime_m:02d}:{uptime_s:02d}"
+        return uptime_str
+
+    def tweet(self):
+        """本日の打鍵数をTwitterに投稿する
+        """
+        msg = f"notes: {self.today_notes}"
+        if self.settings.playmode == playmode.sdvx:
+            msg += f" (btn: {self.today_keys}, vol: {self.today_others})\n"
+        elif self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp):
+            msg += f" (btn: {self.today_keys}, scratch: {self.today_others})\n"
+        msg += f"mode: {self.settings.playmode.name}\n"
+        msg += f"uptime: {self.get_uptime()}\n#otoge_input_viewer\n"
+        encoded_msg = urllib.parse.quote(f"{msg}")
+        webbrowser.open(f"https://twitter.com/intent/tweet?text={encoded_msg}")
+
     def setup_gui(self):
         """GUIの設定を行う
         """
@@ -115,6 +144,7 @@ class JoystickWebSocketServer:
         settings_menu.add_command(label="config", command=self.open_settings_dialog)
         settings_menu.add_command(label="update", command=lambda:self.check_updates(True))
         settings_menu.add_command(label="reset counter", command=self.reset_counter)
+        settings_menu.add_command(label="tweet", command=self.tweet)
         self.menubar.add_cascade(label="file", menu=settings_menu)
 
         ctr_frame = ttk.Frame(self.root)
@@ -178,13 +208,21 @@ class JoystickWebSocketServer:
         )
         self.server_status.grid(row=2, sticky=tk.W)
 
+        # uptime表示
+        self.uptime_label = ttk.Label(
+            main_frame,
+            text=f"uptime: 00:00:00",
+            font=("Meiryo UI", 10)
+        )
+        self.uptime_label.grid(row=3, sticky=tk.W)
+
         # その他情報表示
         self.other_info = ttk.Label(
             main_frame,
             text=f"",
             font=("Meiryo UI", 10)
         )
-        self.other_info.grid(row=3, sticky=tk.W)
+        self.other_info.grid(row=4, sticky=tk.W)
 
     def start_monitor(self):
         # ジョイパッド監視スレッド
@@ -218,6 +256,13 @@ class JoystickWebSocketServer:
             daemon=True
         )
         self.calc_thread.start()
+
+        # 時計更新用スレッド
+        self.uptime_thread = threading.Thread(
+            target=self.thread_uptime,
+            daemon=True
+        )
+        self.uptime_thread.start()
 
     def open_settings_dialog(self):
         """設定ウィンドウを開く
@@ -392,6 +437,14 @@ class JoystickWebSocketServer:
                     self.list_density.append(cur_time)
                 list_last_scratch[tmp['axis']] = tmp['direction']
 
+    def thread_uptime(self):
+        """uptimeの表示更新用スレッド
+        """
+        while True:
+            uptime = self.get_uptime()
+            self.uptime_label.config(text=f"uptime: {uptime}")
+            time.sleep(1)
+
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
         """
@@ -403,10 +456,10 @@ class JoystickWebSocketServer:
                         logger.debug(event)
                     # モードごとに必要なノートのみ通すための判定処理
                     if event.type == pygame.JOYBUTTONDOWN:
-                        if not ((self.settings.playmode==playmode.iidx_sp and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6)):
+                        if not ((self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp) and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6)):
                             continue
                     if event.type == pygame.JOYAXISMOTION:
-                        if not ((self.settings.playmode==playmode.iidx_sp and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1))):
+                        if not ((self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp) and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1))):
                             continue
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
@@ -490,6 +543,7 @@ class JoystickWebSocketServer:
         self.today_notes = 0
         self.today_keys = 0
         self.today_others = 0
+        self.time_start = time.perf_counter()
         self.counter_label.config(text=f"notes: {self.today_notes}")
 
     def update_counter_display(self):
