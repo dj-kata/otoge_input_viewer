@@ -275,11 +275,12 @@ class JoystickWebSocketServer:
         if self.settings.playmode == playmode.iidx_dp:
             self.change_joystick_btn2.config(state='enable')
         else:
-            self.change_joystick_btn2.config(state='disable')
-            self.joystick[1].quit()
-            self.joystick[1] = None
-            self.joystick_info[1].config(text=f"joypad disconnected", foreground='red')
-            self.settings.connected_idx[1] = None
+            if self.settings.connected_idx[1] is not None:
+                self.change_joystick_btn2.config(state='disable')
+                self.joystick[1].quit()
+                self.joystick[1] = None
+                self.joystick_info[1].config(text=f"joypad disconnected", foreground='red')
+                self.settings.connected_idx[1] = None
         self.toggle_server()
 
     def change_joystick(self, controller_pos:int):
