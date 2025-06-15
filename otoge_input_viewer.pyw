@@ -126,9 +126,9 @@ class JoystickWebSocketServer:
         """
         msg = f"notes: {self.today_notes}"
         if self.settings.playmode == playmode.sdvx:
-            msg += f" (btn: {self.today_keys}, vol: {self.today_others})\n"
+            msg += f" (key: {self.today_keys}, vol: {self.today_others})\n"
         elif self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp):
-            msg += f" (btn: {self.today_keys}, scratch: {self.today_others})\n"
+            msg += f" (key: {self.today_keys}, scratch: {self.today_others})\n"
         msg += f"mode: {self.settings.playmode.name}\n"
         msg += f"uptime: {self.get_uptime()}\n#otoge_input_viewer\n"
         encoded_msg = urllib.parse.quote(f"{msg}")
