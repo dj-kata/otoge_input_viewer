@@ -520,7 +520,7 @@ class JoystickWebSocketServer:
         elif event.type == pygame.JOYDEVICEADDED:
             if self.settings.playmode != playmode.iidx_dp:
                 if pygame.joystick.get_count() == 1:
-                    self.reconnect_joystick(0, event.device_idx)
+                    self.reconnect_joystick(0, 0)
             else:
                 if pygame.joystick.get_count() == 2:
                     for i in range(2):
