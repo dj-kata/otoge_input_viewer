@@ -493,7 +493,8 @@ class JoystickWebSocketServer:
                 'axis': event.axis,
                 'direction': out_direction,
                 'pos': event.axis*2 + out_direction,
-                'value': 1
+                'value': 1,
+                'instance_id': event.instance_id,
             }
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.today_notes += 1
@@ -509,23 +510,25 @@ class JoystickWebSocketServer:
             event_data = {
                 'type': 'button',
                 'button': event.button,
-                'state': 'down'
+                'state': 'down',
+                'instance_id': event.instance_id,
             }
         elif event.type == pygame.JOYBUTTONUP:
             event_data = {
                 'type': 'button',
                 'button': event.button,
-                'state': 'up'
+                'state': 'up',
+                'instance_id': event.instance_id,
             }
         elif event.type == pygame.JOYDEVICEADDED:
-            if self.settings.playmode != playmode.iidx_dp:
-                if pygame.joystick.get_count() == 1:
-                    self.reconnect_joystick(0, 0)
+            if pygame.joystick.get_count() == 1:
+                self.reconnect_joystick(0, 0)
             else:
-                if pygame.joystick.get_count() == 2:
-                    for i in range(2):
-                        if self.joystick[i] is None:
-                            self.reconnect_joystick(i, event.device_idx)
+                if self.settings.playmode != playmode.iidx_dp:
+                    if pygame.joystick.get_count() == 2:
+                        for i in range(2):
+                            if self.joystick[i] is None:
+                                self.reconnect_joystick(i, event.device_idx)
         elif event.type == pygame.JOYDEVICEREMOVED:
             for i in range(2):
                 if self.joystick[i].get_instance_id() == event.instance_id:
