@@ -34,6 +34,7 @@ class Settings:
 
         self.load()
         self.save()
+        self.write_websocket_settings()
 
     def disp(self):
         print(f"lx, ly = {self.lx}, {self.ly}")
@@ -64,6 +65,16 @@ class Settings:
     def save(self):
         with open(savefile, 'wb') as f:
             pickle.dump(self, f)
+
+    def write_websocket_settings(self):
+        """websocketサーバのパラメータをcssファイルに出力
+        """
+        # 呼び出される時点で正しいパラメータが設定されている想定
+        with open('html/websocket.css', 'w', encoding='utf-8') as f:
+            f.write(':root {\n')
+            f.write('    --host:"'+self.host+'";\n')
+            f.write('    --port:'+str(self.port)+';\n')
+            f.write('}')
 
 class SettingsDialog(tk.Toplevel):
     def __init__(self, parent, settings:Settings):
@@ -187,11 +198,7 @@ class SettingsDialog(tk.Toplevel):
             self.settings.auto_update = self.auto_update_var.get()
             self.settings.playmode = playmode(self.playmode_var.get())
             self.settings.save()
-            with open('html/websocket.css', 'w', encoding='utf-8') as f:
-                f.write(':root {\n')
-                f.write('    --host:'+host+';\n')
-                f.write('    --port:'+str(port)+';\n')
-                f.write('}')
+            self.settings.write_websocket_settings()
             self.destroy()
         except ValueError as e:
             messagebox.showerror("入力エラー", str(e))
