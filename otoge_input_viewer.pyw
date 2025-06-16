@@ -528,7 +528,7 @@ class JoystickWebSocketServer:
                     if pygame.joystick.get_count() == 2:
                         for i in range(2):
                             if self.joystick[i] is None:
-                                self.reconnect_joystick(i, event.device_idx)
+                                self.reconnect_joystick(i, event.device_index)
         elif event.type == pygame.JOYDEVICEREMOVED:
             for i in range(2):
                 if self.joystick[i].get_instance_id() == event.instance_id:
