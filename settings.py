@@ -72,7 +72,7 @@ class Settings:
         # 呼び出される時点で正しいパラメータが設定されている想定
         with open('html/websocket.css', 'w', encoding='utf-8') as f:
             f.write(':root {\n')
-            f.write('    --host:"'+self.host+'";\n')
+            f.write('    --host:'+self.host+';\n')
             f.write('    --port:'+str(self.port)+';\n')
             f.write('}')
 
