@@ -495,7 +495,6 @@ class JoystickWebSocketServer:
                 'direction': out_direction,
                 'pos': event.axis*2 + out_direction,
                 'value': 1,
-                'instance_id': event.instance_id,
                 'controller_side': controller_side,
             }
             if out_direction != self.pre_scr_direction[event.axis]:
@@ -513,7 +512,6 @@ class JoystickWebSocketServer:
                 'type': 'button',
                 'button': event.button,
                 'state': 'down',
-                'instance_id': event.instance_id,
                 'controller_side': controller_side,
             }
         elif event.type == pygame.JOYBUTTONUP:
@@ -521,7 +519,6 @@ class JoystickWebSocketServer:
                 'type': 'button',
                 'button': event.button,
                 'state': 'up',
-                'instance_id': event.instance_id,
                 'controller_side': controller_side,
             }
         elif event.type == pygame.JOYDEVICEADDED:
