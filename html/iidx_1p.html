@@ -54,7 +54,6 @@
         const eventLog = document.getElementById('eventLog')
         var last_scr_time = [new Date(), new Date()];
         const semicircle = document.getElementById('semicircle');
-        const innerIndicator = document.getElementById('innerIndicator');
         let isRotating = false;
         let currentDirection = null;
         let currentAngle = 0;
@@ -73,16 +72,6 @@
                 ws.onclose = onClose;
                 //ws.onerror = onError;
                 //ws.onopen = onOpen;
-            }
-        }
-
-        function updateInnerIndicator() {
-            innerIndicator.classList.remove('right-active', 'left-active');
-            
-            if (currentDirection === 'right') {
-                innerIndicator.classList.add('right-active');
-            } else if (currentDirection === 'left') {
-                innerIndicator.classList.add('left-active');
             }
         }
 
@@ -122,9 +111,6 @@
             // インターバルを開始
             rotationInterval = setInterval(rotationStep, ROTATION_INTERVAL);
 
-            // 内側の円のインジケーターを更新
-            updateInnerIndicator();
-
             if (direction === 'right') {
                 status.textContent = '右回転中';
             } else if (direction === 'left') {
@@ -140,9 +126,6 @@
             
             isRotating = false;
             currentDirection = null;
-            
-            // 内側の円のインジケーターを非表示
-            innerIndicator.classList.remove('right-active', 'left-active');
             
             status.textContent = '待機中';
         }
