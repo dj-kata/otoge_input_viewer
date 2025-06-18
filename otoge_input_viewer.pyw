@@ -404,7 +404,7 @@ class JoystickWebSocketServer:
             tmp = self.calc_queue.get()
             cur_time = time.perf_counter()
             if tmp['type'] == 'button': # 鍵盤
-                key = tmp['button'] # どの鍵盤か。将来的にコントローラ番号も加味したい。 TODO
+                key = tmp['button'] + tmp['controller_side']*7 # どの鍵盤か
                 if tmp['state'] == 'down':
                     time_last_active[key] = cur_time
                     self.list_density.append(cur_time) # LNは関係なく密度計算には使う
@@ -480,6 +480,7 @@ class JoystickWebSocketServer:
 
         # TODO 切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
         
+        controller_side = 0 if self.settings.connected_idx[0]==event.instance_id else 1
         if event.type == pygame.JOYAXISMOTION:
             out_direction = -1
             if self.pre_scr_val[event.axis] is not None:
@@ -495,6 +496,7 @@ class JoystickWebSocketServer:
                 'pos': event.axis*2 + out_direction,
                 'value': 1,
                 'instance_id': event.instance_id,
+                'controller_side': controller_side,
             }
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.today_notes += 1
@@ -512,6 +514,7 @@ class JoystickWebSocketServer:
                 'button': event.button,
                 'state': 'down',
                 'instance_id': event.instance_id,
+                'controller_side': controller_side,
             }
         elif event.type == pygame.JOYBUTTONUP:
             event_data = {
@@ -519,6 +522,7 @@ class JoystickWebSocketServer:
                 'button': event.button,
                 'state': 'up',
                 'instance_id': event.instance_id,
+                'controller_side': controller_side,
             }
         elif event.type == pygame.JOYDEVICEADDED:
             if pygame.joystick.get_count() == 1:
