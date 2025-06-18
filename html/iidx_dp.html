@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>Otoge Input Viewer(IIDX 1P)</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="iidx.css" />
+    <link rel="stylesheet" type="text/css" href="scratch.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
+</head>
+<body>
+    <!-- getElementByIdのために先にHTMLを書いておく必要がある -->
+    <div id="eventLog"></div>
+
+    <warning>Not Connected!!</warning>
+    <div class="top">
+        <div class="container">
+            <div class="semicircle" id="semicircle1">
+                <div class="top-half"></div>
+                <div class="bottom-half"></div>
+            </div>
+            <div class="scr0" id="innerIndicator"></div>
+            <div class="scr1" id="innerIndicator"></div>
+        </div>
+
+        <div class="grid-keys">
+            <div class="keys-row">
+                <div id="btn2" class="btn"></div>
+                <div id="btn4" class="btn"></div>
+                <div id="btn6" class="btn"></div>
+
+            </div>
+            <div class="keys-row">
+                <div id="btn1" class="btn"></div>
+                <div id="btn3" class="btn"></div>
+                <div id="btn5" class="btn"></div>
+                <div id="btn7" class="btn"></div>
+
+            </div>
+        </div>
+
+        <div class="grid-keys">
+            <div class="keys-row">
+                <div id="btn9" class="btn"></div>
+                <div id="btn11" class="btn"></div>
+                <div id="btn13" class="btn"></div>
+
+            </div>
+            <div class="keys-row">
+                <div id="btn8" class="btn"></div>
+                <div id="btn10" class="btn"></div>
+                <div id="btn12" class="btn"></div>
+                <div id="btn14" class="btn"></div>
+
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="semicircle" id="semicircle2">
+                <div class="top-half"></div>
+                <div class="bottom-half"></div>
+            </div>
+            <div class="scr2" id="innerIndicator"></div>
+            <div class="scr3" id="innerIndicator"></div>
+        </div>
+    </div>
+    <div class="background">
+        <table class="info">
+            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+        </table>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
+        var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+        var ws_url = 'ws://' + host + ':' + port
+        console.log(ws_url)
+        var ws = null;
+        const eventLog = document.getElementById('eventLog')
+        var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
+        const semicircle = [document.getElementById('semicircle1'),document.getElementById('semicircle2')]
+        let isRotating = [false,false];
+        let currentDirection = [null,null];
+        let currentAngle = [0,0];
+        let rotationInterval = [null,null];
+        // 回転設定
+        const ROTATION_INTERVAL = 20; // 16ms間隔（約60FPS）
+        const ANGLE_INCREMENT = 3; // 1回のインターバルで3度回転（約180度/秒）
+
+        function init() {
+            open();
+        }
+        function open() {
+            if (ws == null){
+                ws = new WebSocket(ws_url);
+                ws.onmessage = onMessage;
+                ws.onclose = onClose;
+                //ws.onerror = onError;
+                //ws.onopen = onOpen;
+            }
+        }
+
+        function setRotation(controller_side, angle) {
+            semicircle[controller_side].style.transform = `rotate(${angle}deg)`;
+            currentAngle[controller_side] = angle;
+            //updateAngleDisplay();
+        }
+
+        function rotationStep(controller_side) {
+            if (!isRotating[controller_side]) return;
+            
+            // 角度を増減
+            if (currentDirection[controller_side] === 'right') {
+                currentAngle[controller_side] += ANGLE_INCREMENT;
+            } else if (currentDirection[controller_side] === 'left') {
+                currentAngle[controller_side] -= ANGLE_INCREMENT;
+            }
+            
+            // 回転を適用
+            semicircle[controller_side].style.transform = `rotate(${currentAngle[controller_side]}deg)`;
+            //updateAngleDisplay();
+        }
+
+        function startRotation(controller_side, direction) {
+            // 既に同じ方向に回転中の場合は何もしない
+            if (isRotating && currentDirection[controller_side] === direction) {
+                return;
+            }
+
+            // 既存の回転を停止
+            stopRotation(controller_side);
+            
+            currentDirection[controller_side] = direction;
+            isRotating[controller_side] = true;
+
+            // インターバルを開始
+            rotationInterval[controller_side] = setInterval(function(){rotationStep(controller_side)}, ROTATION_INTERVAL);
+        }
+
+        function stopRotation(controller_side) {
+            if (rotationInterval[controller_side]) {
+                clearInterval(rotationInterval[controller_side]);
+                rotationInterval[controller_side] = null;
+            }
+            
+            isRotating[controller_side] = false;
+            currentDirection[controller_side] = null;
+        }
+
+        function resetAngle() {
+            stopRotation(0);
+            stopRotation(1);
+            setRotation(0, 0);
+            setRotation(1, 0);
+        }
+
+        function onMessage(event) {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
+            var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
+            //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
+            var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-each-key').trim();
+            var pushed = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 20px ' + bg_on_main
+            pushed += ', 0 0 10px ' + bg_on_main
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 60px ' + bg_on_main
+            try {
+                const events = JSON.parse(event.data)
+                
+                // 単一イベントと配列の両方に対応
+                const processedEvents = Array.isArray(events) ? events : [events];
+                processedEvents.forEach(e => {
+                  $('warning').html('');
+                  if (e.type == 'button'){ //// 鍵盤
+                    var btn = e.button+1+e.controller_side*7
+                    if (e.state == 'down'){
+                        $('#btn'+btn).css('box-shadow', pushed)
+                        $('#btn'+btn).css('background', bg_on_main)
+                    }else{
+                        $('#btn'+btn).css('box-shadow', 'none')
+                        $('#btn'+btn).css('background', bg_off)
+                    }
+                  }else if (e.type == 'axis'){ //// 皿
+                    var direction = ""
+                    var direction_other = "" // 逆側
+
+                    if (e.controller_side==0){
+                        direction = 1-e.pos
+                    }else{
+                        direction = e.pos + 2
+                    }
+                    last_scr_time[direction] = new Date();
+                    if (e.value == 1){
+                        $('.scr'+direction).css('box-shadow', pushed)
+                        $('.scr'+direction).css('background', bg_on_main)
+                        $('.scr'+(1-direction)).css('box-shadow', 'none')
+                        $('.scr'+(1-direction)).css('background', bg_off)
+                    }else{
+                        $('.scr'+direction).css('box-shadow', 'none')
+                        $('.scr'+direction).css('background', bg_off)
+                    }
+                    if (e.value == 1){
+                        if (direction==0){
+                            startRotation(e.controller_side, 'left')
+                        }else{
+                            startRotation(e.controller_side, 'right')
+                        }
+                    }else{
+                        stopRotation(e.controller_side)
+                    }
+                  }else if (e.type == 'release'){
+                    $('release').html(e.value)
+                  }else if (e.type == 'release_eachkey'){
+                    if (disp_release_each_key == 1){
+                        var btn = e.button+1
+                        $('#btn'+btn).text(e.value)
+                    }
+                  }else if (e.type == 'density'){
+                    $('density').html(e.value)
+                  }else if (e.type == 'notes'){
+                    $('notes').html(e.value)
+                  }
+                })
+            } catch (e) {
+                console.error('データ解析エラー:', e)
+            }
+        }
+        function onClose(event) {
+            console.log('切断されました')
+            $('warning').html('Not Connected!!');
+            ws = null;
+            setTimeout("open()", 3000);
+        }
+
+        function formatEvent(event) {
+            const date = new Date().toLocaleTimeString()
+            if (event.type === 'button') {
+                return `[${date}] ボタン ${event.button}: ${event.state}`
+            }
+            if (event.type === 'axis') {
+                return `[${date}] 軸 ${event.axis}: ${event.value.toFixed(2)}`
+            }
+            return `[${date}] 不明なイベント`
+        }
+
+        function clearLog() {
+            eventLog.innerHTML = ''
+        }
+        
+        function stop_scratch() {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            cur = new Date();
+            for (i=0; i<4; i++){
+                 if (cur-last_scr_time[i] > 150){
+                    stopRotation(i/2)
+                    $('.scr'+i).css('box-shadow', 'none')
+                    $('.scr'+i).css('background', bg_off)
+                 }
+            }
+        }
+
+        $(init);
+        const c_stop_scr = setInterval(stop_scratch, 200);
+    </script>
+</body>
+</html>
