@@ -189,15 +189,17 @@
 
                     if (e.controller_side==0){
                         direction = 1-e.pos
+                        direction_other = e.pos
                     }else{
                         direction = e.pos + 2
+                        direction_other = 3-e.pos
                     }
                     last_scr_time[direction] = new Date();
                     if (e.value == 1){
                         $('.scr'+direction).css('box-shadow', pushed)
                         $('.scr'+direction).css('background', bg_on_main)
-                        $('.scr'+(1-direction)).css('box-shadow', 'none')
-                        $('.scr'+(1-direction)).css('background', bg_off)
+                        $('.scr'+direction_other).css('box-shadow', 'none')
+                        $('.scr'+direction_other).css('background', bg_off)
                     }else{
                         $('.scr'+direction).css('box-shadow', 'none')
                         $('.scr'+direction).css('background', bg_off)
