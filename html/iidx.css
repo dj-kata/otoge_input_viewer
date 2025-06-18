@@ -7,6 +7,8 @@ body {
     background-color: rgba(0, 0, 0, 0.99);
     margin: 0px;
     padding: 0px;
+    padding-top: 30px;
+    padding-left: 30px;
     font-family: 'RocknRoll One', sans-serif;
     color:rgb(170, 221, 255);   
     font-size:2px;
@@ -37,11 +39,38 @@ table#disp td{
                     1px -1px 0 #000,
                     -1px -1px 0 #000;
 }
-td.btn{
-    background: var(--bg-off);
-    box-shadow: none;
+.top {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+.grid-keys {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+.keys-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.btn{
+    vertical-align: middle;
     border: var(--border-common);
     font-size: 26px;
+    text-align: center;
+    color: #7fa;
+    width: 80px;
+    height: 120px;
+    line-height: 1px;
+    text-shadow: 1px 1px 0 #000,
+                    -1px 1px 0 #000,
+                    1px -1px 0 #000,
+                    -1px -1px 0 #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 table.info{
     text-align: left;
@@ -60,38 +89,6 @@ table.info :nth-child(2){
 }
 table.info :nth-child(4){
     padding-left: 50px;
-}
-.scr0{
-    background: var(--bg-off);
-    border: var(--border-common);
-    border-radius: 120px 120px 0% 0%;
-    box-shadow: 0 0 0 5px #cccccc;
-    color: #0000aa;
-    display: inline-block;
-    width: 240px;
-    height: 120px;
-    line-height: 3;
-    margin: 4px;
-    padding: 0;
-    text-align: center;
-    text-decoration: none;
-    box-shadow: none;
-}
-.scr1 {
-    background: var(--bg-off);
-    border: var(--border-common);
-    border-radius: 0% 0% 120px 120px;
-    box-shadow: 0 0 0 5px #cccccc;
-    color: #0000aa;
-    display: inline-block;
-    width: 240px;
-    height: 120px;
-    line-height: 3;
-    margin: 4px;
-    padding: 0;
-    text-align: center;
-    text-decoration: none;
-    box-shadow: none;
 }
 warning {
     font-size: 120px;

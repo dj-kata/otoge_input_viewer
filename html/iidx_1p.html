@@ -1,11 +1,49 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <title>Otoge Input Viewer(IIDX 2P)</title>
+    <title>Otoge Input Viewer(IIDX 1P)</title>
     <link rel="stylesheet" type="text/css" href="property.css" />
     <link rel="stylesheet" type="text/css" href="iidx.css" />
+    <link rel="stylesheet" type="text/css" href="scratch.css" />
     <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
 </head>
+<body>
+    <!-- getElementByIdのために先にHTMLを書いておく必要がある -->
+    <div id="eventLog"></div>
+
+    <warning>Not Connected!!</warning>
+    <div class="top">
+        <div class="container">
+            <div class="semicircle" id="semicircle">
+                <div class="top-half"></div>
+                <div class="bottom-half"></div>
+            </div>
+            <div class="scr0" id="innerIndicator"></div>
+            <div class="scr1" id="innerIndicator"></div>
+        </div>
+
+        <div class="grid-keys">
+            <div class="keys-row">
+                <div id="btn2" class="btn"></div>
+                <div id="btn4" class="btn"></div>
+                <div id="btn6" class="btn"></div>
+
+            </div>
+            <div class="keys-row">
+                <div id="btn1" class="btn"></div>
+                <div id="btn3" class="btn"></div>
+                <div id="btn5" class="btn"></div>
+                <div id="btn7" class="btn"></div>
+
+            </div>
+        </div>
+    </div>
+    <div class="background">
+        <table class="info">
+            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+        </table>
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
         var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
@@ -15,6 +53,15 @@
         var ws = null;
         const eventLog = document.getElementById('eventLog')
         var last_scr_time = [new Date(), new Date()];
+        const semicircle = document.getElementById('semicircle');
+        const innerIndicator = document.getElementById('innerIndicator');
+        let isRotating = false;
+        let currentDirection = null;
+        let currentAngle = 0;
+        let rotationInterval = null;
+        // 回転設定
+        const ROTATION_INTERVAL = 20; // 16ms間隔（約60FPS）
+        const ANGLE_INCREMENT = 3; // 1回のインターバルで3度回転（約180度/秒）
 
         function init() {
             open();
@@ -27,6 +74,82 @@
                 //ws.onerror = onError;
                 //ws.onopen = onOpen;
             }
+        }
+
+        function updateInnerIndicator() {
+            innerIndicator.classList.remove('right-active', 'left-active');
+            
+            if (currentDirection === 'right') {
+                innerIndicator.classList.add('right-active');
+            } else if (currentDirection === 'left') {
+                innerIndicator.classList.add('left-active');
+            }
+        }
+
+        function setRotation(angle) {
+            semicircle.style.transform = `rotate(${angle}deg)`;
+            currentAngle = angle;
+            //updateAngleDisplay();
+        }
+
+        function rotationStep() {
+            if (!isRotating) return;
+            
+            // 角度を増減
+            if (currentDirection === 'right') {
+                currentAngle += ANGLE_INCREMENT;
+            } else if (currentDirection === 'left') {
+                currentAngle -= ANGLE_INCREMENT;
+            }
+            
+            // 回転を適用
+            semicircle.style.transform = `rotate(${currentAngle}deg)`;
+            //updateAngleDisplay();
+        }
+
+        function startRotation(direction) {
+            // 既に同じ方向に回転中の場合は何もしない
+            if (isRotating && currentDirection === direction) {
+                return;
+            }
+
+            // 既存の回転を停止
+            stopRotation();
+            
+            currentDirection = direction;
+            isRotating = true;
+
+            // インターバルを開始
+            rotationInterval = setInterval(rotationStep, ROTATION_INTERVAL);
+
+            // 内側の円のインジケーターを更新
+            updateInnerIndicator();
+
+            if (direction === 'right') {
+                status.textContent = '右回転中';
+            } else if (direction === 'left') {
+                status.textContent = '左回転中';
+            }
+        }
+
+        function stopRotation() {
+            if (rotationInterval) {
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+            }
+            
+            isRotating = false;
+            currentDirection = null;
+            
+            // 内側の円のインジケーターを非表示
+            innerIndicator.classList.remove('right-active', 'left-active');
+            
+            status.textContent = '待機中';
+        }
+
+        function resetAngle() {
+            stopRotation();
+            setRotation(0);
         }
 
         function onMessage(event) {
@@ -73,6 +196,15 @@
                         $('.scr'+direction).css('box-shadow', 'none')
                         $('.scr'+direction).css('background', bg_off)
                     }
+                    if (e.value == 1){
+                        if (direction==0){
+                            startRotation('left')
+                        }else{
+                            startRotation('right')
+                        }
+                    }else{
+                        stopRotation()
+                    }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
                   }else if (e.type == 'release_eachkey'){
@@ -116,7 +248,8 @@
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
             cur = new Date();
             for (i=0; i<2; i++){
-                 if (cur-last_scr_time[i] > 200){
+                 if (cur-last_scr_time[i] > 150){
+                    stopRotation()
                     $('.scr'+i).css('box-shadow', 'none')
                     $('.scr'+i).css('background', bg_off)
                  }
@@ -126,50 +259,5 @@
         $(init);
         const c_stop_scr = setInterval(stop_scratch, 200);
     </script>
-<body>
-    <div id="eventLog"></div>
-
-    <warning>Not Connected!!</warning>
-    <div class="background">
-        <table id="outer">
-            <tr>
-                <td>
-                    <table id="disp">
-                        <tr>
-                            <td><div class="scr0"></div></td>
-                        </tr>
-
-                        <tr>
-                            <td><div class="scr1"></div></td>
-                        </tr>
-                    </table>
-                </td>
-
-                <td>
-                    <center>
-                        <table id="disp">
-                            <tr>
-                                <td id="btn2" class="btn"></td>
-                                <td id="btn4" class="btn"></td>
-                                <td id="btn6" class="btn"></td>
-                            </tr>
-                        </table>
-                    </center>
-                    <table id="disp">
-                        <tr>
-                            <td id="btn1" class="btn"></td>
-                            <td id="btn3" class="btn"></td>
-                            <td id="btn5" class="btn"></td>
-                            <td id="btn7" class="btn"></td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-        <table class="info">
-            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
-            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
-        </table>
-    </div>
 </body>
 </html>
