@@ -84,8 +84,7 @@
         }
 
         function rotationStep() {
-            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scr-right-lr2-mode').trim();
-            if (!isRotating && (lr2mode==0)) return;
+            if (!isRotating) return;
             
             // 角度を増減
             if (currentDirection === 'right') {
@@ -101,13 +100,12 @@
 
         function startRotation(direction) {
             // 既に同じ方向に回転中の場合は何もしない
-            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scr-right-lr2-mode').trim();
-            if ((lr2mode==0) && isRotating && currentDirection === direction) {
+            if (isRotating && currentDirection === direction) {
                 return;
             }
 
             // 既存の回転を停止
-            // stopRotation();
+            stopRotation();
             
             currentDirection = direction;
             isRotating = true;
@@ -196,14 +194,14 @@
                             stopRotation()
                         }
                     }else{ // lr2mode
-                        if (e.value_org < 0){
+                        if (e.value_org >0){
                             startRotation('right')
                             $('.scr0').css('box-shadow', pushed)
                             $('.scr0').css('background', bg_on_main)
                             $('.scr1').css('box-shadow', 'none')
                             $('.scr1').css('background', bg_off)
                         }
-                        else if (e.value_org > 0){
+                        else if (e.value_org < 0){
                             startRotation('left')
                             $('.scr1').css('box-shadow', pushed)
                             $('.scr1').css('background', bg_on_main)

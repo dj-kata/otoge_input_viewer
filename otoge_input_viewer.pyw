@@ -496,6 +496,7 @@ class JoystickWebSocketServer:
                 'pos': event.axis*2 + out_direction,
                 'value': 1,
                 'controller_side': controller_side,
+                'value_org': event.value,
             }
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.today_notes += 1
