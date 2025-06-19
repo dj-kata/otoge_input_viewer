@@ -6,8 +6,6 @@
     --port:8765;
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
     --border-common: #ccc solid 4px;
-    /* スクラッチ外側部分の枠線。box-shadowで設定するため分けている */
-    --border-outer-scratch: 0 0 0 4px #cccccc;
     /* 鍵盤ごとリリース速度表示のon/off */
     --disp-release-each-key:1;
     /* 鍵盤ごとリリース速度表示の色 */
@@ -19,7 +17,9 @@
     /* ノーツ数表示の色 */
     --color-notes: #fee;
     /* 鍵盤を押していないときの背景色 */
-    --bg-off: rgba(0,0,0, 0.98);
+    --bg-keys-off: rgba(0,0,0, 0.98);
+    /* スクラッチを回していないときの背景色 */
+    --bg-scratch-off: rgba(0,0,0, 0.98);
     /* 皿外側領域の色0 */
     --bg-outer-scratch0: rgba(112,112,112, 0.98);
     /* 皿外側領域の色1 */

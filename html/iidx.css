@@ -46,7 +46,7 @@ table#disp{
     justify-content: center;
 }
 .btn{
-    background: var(--bg-off);
+    background: var(--bg-keys-off);
     vertical-align: middle;
     border: var(--border-common);
     font-size: 26px;

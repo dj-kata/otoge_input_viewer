@@ -7,7 +7,7 @@
 }
 
 .semicircle {
-    box-shadow: 0 0 0 4px #cccccc;
+    border: var(--border-common);
     width: 240px;
     height: 240px;
     position: relative;
@@ -27,25 +27,21 @@
 .top-half {
     width: 240px;
     height: 120px;
-    /* background: linear-gradient(90deg, #faa 50%, #aaf 50%); */
-    background: #777;
+    background: var(--bg-outer-scratch0);
     position: absolute;
     top: 0;
     left: 0;
     border-radius: 120px 120px 0 0;
-    /* background: var(--bg-off); */
 }
 
 .bottom-half {
     width: 240px;
     height: 120px;
-    /* background: linear-gradient(90deg, #afa 50%, #ffa 50%); */
-    background: #aaa;
+    background: var(--bg-outer-scratch1);
     position: absolute;
     bottom: 0px;
     left: 0px;
-    border-radius: 0 0 100% 100%;
-    /* background: var(--bg-off); */
+    border-radius: 0 0 120px 120px;
 }
 
 @keyframes rotate-right {
@@ -72,78 +68,14 @@
     margin-top: 30px;
 }
 
-.control-button {
-    padding: 15px 30px;
-    font-size: 18px;
-    font-weight: bold;
-    border: 2px solid #666;
-    border-radius: 10px;
-    background-color: #333;
-    color: #fff;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-.control-button:hover {
-    background-color: #555;
-    border-color: #888;
-}
-
-.control-button:active {
-    background-color: #222;
-    border-color: #aaa;
-    transform: scale(0.95);
-}
-
-.control-button.left:active {
-    background-color: #4a4;
-    border-color: #6c6;
-}
-
-.control-button.right:active {
-    background-color: #a44;
-    border-color: #c66;
-}
-
-.angle-display {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #888;
-}
-
-.reset-button {
-    margin-top: 15px;
-    padding: 8px 16px;
-    font-size: 14px;
-    border: 1px solid #666;
-    border-radius: 5px;
-    background-color: #444;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.reset-button:hover {
-    background-color: #666;
-}
-
-.instructions {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #aaa;
-    line-height: 1.5;
-}
-
 .scr0{
     position: absolute;
-    top: 22px;
-    left:20px;
+    top: 26px;
+    left:24px;
     box-sizing: border-box;
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 100px 100px 0% 0%;
-    box-shadow: 0 0 0 4px #cccccc;
     color: #0000aa;
     display: inline-block;
     width: 200px;
@@ -156,14 +88,13 @@
     box-shadow: none;
 }
 .scr1 {
-    bottom: 22px;
-    right:  20px;
+    top: 122px;
+    left:  24px;
     box-sizing: border-box;
     position: absolute;
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 0% 0% 100px 100px;
-    box-shadow: 0 0 0 4px #cccccc;
     color: #0000aa;
     display: inline-block;
     width: 200px;
@@ -180,10 +111,9 @@
     top: 22px;
     left:20px;
     box-sizing: border-box;
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 100px 100px 0% 0%;
-    box-shadow: 0 0 0 4px #cccccc;
     color: #0000aa;
     display: inline-block;
     width: 200px;
@@ -200,10 +130,9 @@
     right:  20px;
     box-sizing: border-box;
     position: absolute;
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 0% 0% 100px 100px;
-    box-shadow: 0 0 0 4px #cccccc;
     color: #0000aa;
     display: inline-block;
     width: 200px;

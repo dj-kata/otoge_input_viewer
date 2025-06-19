@@ -46,6 +46,7 @@
             </table>
         </div>
     </div>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
         var lr2mode = 0;
@@ -140,7 +141,8 @@
 
         function onMessage(event) {
             lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
-            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var bg_keys_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-keys-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
             var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
             //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
@@ -166,7 +168,7 @@
                         $('#btn'+btn).css('background', bg_on_main)
                     }else{
                         $('#btn'+btn).css('box-shadow', 'none')
-                        $('#btn'+btn).css('background', bg_off)
+                        $('#btn'+btn).css('background', bg_keys_off)
                     }
                   }else if (e.type == 'axis'){ //// 皿
                     var direction = ""
@@ -179,10 +181,10 @@
                             $('.scr'+direction).css('box-shadow', pushed)
                             $('.scr'+direction).css('background', bg_on_main)
                             $('.scr'+(1-direction)).css('box-shadow', 'none')
-                            $('.scr'+(1-direction)).css('background', bg_off)
+                            $('.scr'+(1-direction)).css('background', bg_scratch_off)
                         }else{
                             $('.scr'+direction).css('box-shadow', 'none')
-                            $('.scr'+direction).css('background', bg_off)
+                            $('.scr'+direction).css('background', bg_scratch_off)
                         }
                         if (e.value == 1){
                             if (direction==0){
@@ -199,20 +201,20 @@
                             $('.scr0').css('box-shadow', pushed)
                             $('.scr0').css('background', bg_on_main)
                             $('.scr1').css('box-shadow', 'none')
-                            $('.scr1').css('background', bg_off)
+                            $('.scr1').css('background', bg_scratch_off)
                         }
                         else if (e.value_org > 0){
                             startRotation('left')
                             $('.scr1').css('box-shadow', pushed)
                             $('.scr1').css('background', bg_on_main)
                             $('.scr0').css('box-shadow', 'none')
-                            $('.scr0').css('background', bg_off)
+                            $('.scr0').css('background', bg_scratch_off)
                         }else{
                             stopRotation()
                             $('.scr0').css('box-shadow', 'none')
-                            $('.scr0').css('background', bg_off)
+                            $('.scr0').css('background', bg_scratch_off)
                             $('.scr1').css('box-shadow', 'none')
-                            $('.scr1').css('background', bg_off)
+                            $('.scr1').css('background', bg_scratch_off)
                         }
                     }
                   }else if (e.type == 'release'){
@@ -255,7 +257,7 @@
         }
         
         function stop_scratch() {
-            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
             lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
             cur = new Date();
             if (lr2mode==0){
@@ -263,7 +265,7 @@
                      if (cur-last_scr_time[i] > 150){
                         stopRotation()
                         $('.scr'+i).css('box-shadow', 'none')
-                        $('.scr'+i).css('background', bg_off)
+                        $('.scr'+i).css('background', bg_scratch_off)
                      }
                 }
             }
