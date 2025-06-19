@@ -1,3 +1,4 @@
+# 設定用クラス及び設定ダイアログをここに書く
 import pickle, os
 from enum import Enum
 import tkinter as tk
