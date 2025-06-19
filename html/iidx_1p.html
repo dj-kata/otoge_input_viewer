@@ -114,12 +114,6 @@
 
             // インターバルを開始
             rotationInterval = setInterval(rotationStep, ROTATION_INTERVAL);
-
-            if (direction === 'right') {
-                status.textContent = '右回転中';
-            } else if (direction === 'left') {
-                status.textContent = '左回転中';
-            }
         }
 
         function stopRotation() {
@@ -130,8 +124,6 @@
             
             isRotating = false;
             currentDirection = null;
-            
-            status.textContent = '待機中';
         }
 
         function resetAngle() {
