@@ -12,39 +12,41 @@
     <div id="eventLog"></div>
 
     <warning>Not Connected!!</warning>
-    <div class="top">
-        <div class="grid-keys">
-            <div class="keys-row">
-                <div id="btn2" class="btn"></div>
-                <div id="btn4" class="btn"></div>
-                <div id="btn6" class="btn"></div>
-
-            </div>
-            <div class="keys-row">
-                <div id="btn1" class="btn"></div>
-                <div id="btn3" class="btn"></div>
-                <div id="btn5" class="btn"></div>
-                <div id="btn7" class="btn"></div>
-
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="semicircle" id="semicircle">
-                <div class="top-half"></div>
-                <div class="bottom-half"></div>
-            </div>
-            <div class="scr0" id="innerIndicator"></div>
-            <div class="scr1" id="innerIndicator"></div>
-        </div>
-    </div>
     <div class="background">
-        <table class="info">
-            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
-            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
-            <tr><td><dbg></dbg></td></tr>
-        </table>
+        <div class="top">
+            <div class="grid-keys">
+                <div class="keys-row">
+                    <div id="btn2" class="btn"></div>
+                    <div id="btn4" class="btn"></div>
+                    <div id="btn6" class="btn"></div>
+
+                </div>
+                <div class="keys-row">
+                    <div id="btn1" class="btn"></div>
+                    <div id="btn3" class="btn"></div>
+                    <div id="btn5" class="btn"></div>
+                    <div id="btn7" class="btn"></div>
+
+                </div>
+            </div>
+
+            <div class="container">
+                <div class="semicircle" id="semicircle">
+                    <div class="top-half"></div>
+                    <div class="bottom-half"></div>
+                </div>
+                <div class="scr0" id="innerIndicator"></div>
+                <div class="scr1" id="innerIndicator"></div>
+            </div>
+        </div>
+        <div>
+            <table class="info">
+                <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+                <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+            </table>
+        </div>
     </div>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
         var lr2mode = 0;
@@ -138,7 +140,7 @@
         }
 
         function onMessage(event) {
-            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scr-right-lr2-mode').trim();
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-right-lr2-mode').trim();
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
             var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
@@ -157,7 +159,6 @@
                 // 単一イベントと配列の両方に対応
                 const processedEvents = Array.isArray(events) ? events : [events];
                 processedEvents.forEach(e => {
-                    console.log(e)
                   $('warning').html('');
                   if (e.type == 'button'){ //// 鍵盤
                     var btn = e.button+1
@@ -256,7 +257,7 @@
         
         function stop_scratch() {
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
-            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scr-right-lr2-mode').trim();
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-right-lr2-mode').trim();
             cur = new Date();
             if (lr2mode==0){
                 for (i=0; i<2; i++){

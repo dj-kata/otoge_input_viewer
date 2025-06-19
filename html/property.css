@@ -5,11 +5,25 @@
     /* WebSocketポート番号。処理タイミングの兼ね合いでこちらはアプリ側から変更する仕様 */
     --port:8765;
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
-    --border-common: #ccc solid 5px;
+    --border-common: #ccc solid 4px;
+    /* スクラッチ外側部分の枠線。box-shadowで設定するため分けている */
+    --border-outer-scratch: 0 0 0 4px #cccccc;
     /* 鍵盤ごとリリース速度表示のon/off */
     --disp-release-each-key:1;
+    /* 鍵盤ごとリリース速度表示の色 */
+    --color-release-eachkey: #aaa;
+    /* 鍵盤ごとリリース速度表示の色 */
+    --color-release-total: #dff;
+    /* 密度表示の色 */
+    --color-density: #dff;
+    /* ノーツ数表示の色 */
+    --color-notes: #fee;
     /* 鍵盤を押していないときの背景色 */
     --bg-off: rgba(0,0,0, 0.98);
+    /* 皿外側領域の色0 */
+    --bg-outer-scratch0: rgba(112,112,112, 0.98);
+    /* 皿外側領域の色1 */
+    --bg-outer-scratch1: rgba(160,160,160, 0.98);
     /* 鍵盤を押した時のエフェクトで使う内側の色 */
     --bg-on-inner: rgba(255,255,255, 0.98);
     /* 鍵盤を押した時のエフェクトで使うメインの色 */
@@ -17,7 +31,7 @@
     /* 鍵盤を押した時のエフェクトで使うサブの色(SDVXのFXとか右つまみとかで使用) */
     --bg-on-sub: rgba(255,34,120,0.98);
     /* 左皿をLR2モードにする */
-    --scr-left-lr2-mode: 0;
+    --scratch-left-lr2-mode: 0;
     /* 右皿をLR2モードにする */
-    --scr-right-lr2-mode: 0;
+    --scratch-right-lr2-mode: 0;
 }

@@ -12,40 +12,43 @@
     <div id="eventLog"></div>
 
     <warning>Not Connected!!</warning>
-    <div class="top">
-        <div class="container">
-            <div class="semicircle" id="semicircle">
-                <div class="top-half"></div>
-                <div class="bottom-half"></div>
-            </div>
-            <div class="scr0" id="innerIndicator"></div>
-            <div class="scr1" id="innerIndicator"></div>
-        </div>
-
-        <div class="grid-keys">
-            <div class="keys-row">
-                <div id="btn2" class="btn"></div>
-                <div id="btn4" class="btn"></div>
-                <div id="btn6" class="btn"></div>
-
-            </div>
-            <div class="keys-row">
-                <div id="btn1" class="btn"></div>
-                <div id="btn3" class="btn"></div>
-                <div id="btn5" class="btn"></div>
-                <div id="btn7" class="btn"></div>
-
-            </div>
-        </div>
-    </div>
     <div class="background">
-        <table class="info">
-            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
-            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
-        </table>
+        <div class="top">
+            <div class="container">
+                <div class="semicircle" id="semicircle">
+                    <div class="top-half"></div>
+                    <div class="bottom-half"></div>
+                </div>
+                <div class="scr0" id="innerIndicator"></div>
+                <div class="scr1" id="innerIndicator"></div>
+            </div>
+
+            <div class="grid-keys">
+                <div class="keys-row">
+                    <div id="btn2" class="btn"></div>
+                    <div id="btn4" class="btn"></div>
+                    <div id="btn6" class="btn"></div>
+
+                </div>
+                <div class="keys-row">
+                    <div id="btn1" class="btn"></div>
+                    <div id="btn3" class="btn"></div>
+                    <div id="btn5" class="btn"></div>
+                    <div id="btn7" class="btn"></div>
+
+                </div>
+            </div>
+        </div>
+        <div>
+            <table class="info">
+                <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+                <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+            </table>
+        </div>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
+        var lr2mode = 0;
         var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
         var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
         var ws_url = 'ws://' + host + ':' + port
@@ -136,6 +139,7 @@
         }
 
         function onMessage(event) {
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
             var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
@@ -170,23 +174,46 @@
 
                     direction = 1-e.pos
                     last_scr_time[direction] = new Date();
-                    if (e.value == 1){
-                        $('.scr'+direction).css('box-shadow', pushed)
-                        $('.scr'+direction).css('background', bg_on_main)
-                        $('.scr'+(1-direction)).css('box-shadow', 'none')
-                        $('.scr'+(1-direction)).css('background', bg_off)
-                    }else{
-                        $('.scr'+direction).css('box-shadow', 'none')
-                        $('.scr'+direction).css('background', bg_off)
-                    }
-                    if (e.value == 1){
-                        if (direction==0){
-                            startRotation('left')
+                    if (lr2mode == 0) {
+                        if (e.value == 1){
+                            $('.scr'+direction).css('box-shadow', pushed)
+                            $('.scr'+direction).css('background', bg_on_main)
+                            $('.scr'+(1-direction)).css('box-shadow', 'none')
+                            $('.scr'+(1-direction)).css('background', bg_off)
                         }else{
-                            startRotation('right')
+                            $('.scr'+direction).css('box-shadow', 'none')
+                            $('.scr'+direction).css('background', bg_off)
                         }
-                    }else{
-                        stopRotation()
+                        if (e.value == 1){
+                            if (direction==0){
+                                startRotation('left')
+                            }else{
+                                startRotation('right')
+                            }
+                        }else{
+                            stopRotation()
+                        }
+                    }else{ // lr2mode
+                        if (e.value_org <0){
+                            startRotation('right')
+                            $('.scr0').css('box-shadow', pushed)
+                            $('.scr0').css('background', bg_on_main)
+                            $('.scr1').css('box-shadow', 'none')
+                            $('.scr1').css('background', bg_off)
+                        }
+                        else if (e.value_org > 0){
+                            startRotation('left')
+                            $('.scr1').css('box-shadow', pushed)
+                            $('.scr1').css('background', bg_on_main)
+                            $('.scr0').css('box-shadow', 'none')
+                            $('.scr0').css('background', bg_off)
+                        }else{
+                            stopRotation()
+                            $('.scr0').css('box-shadow', 'none')
+                            $('.scr0').css('background', bg_off)
+                            $('.scr1').css('box-shadow', 'none')
+                            $('.scr1').css('background', bg_off)
+                        }
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
@@ -229,13 +256,16 @@
         
         function stop_scratch() {
             var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
             cur = new Date();
-            for (i=0; i<2; i++){
-                 if (cur-last_scr_time[i] > 150){
-                    stopRotation()
-                    $('.scr'+i).css('box-shadow', 'none')
-                    $('.scr'+i).css('background', bg_off)
-                 }
+            if (lr2mode==0){
+                for (i=0; i<2; i++){
+                     if (cur-last_scr_time[i] > 150){
+                        stopRotation()
+                        $('.scr'+i).css('box-shadow', 'none')
+                        $('.scr'+i).css('background', bg_off)
+                     }
+                }
             }
         }
 

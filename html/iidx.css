@@ -7,8 +7,6 @@ body {
     background-color: rgba(0, 0, 0, 0.99);
     margin: 0px;
     padding: 0px;
-    padding-top: 30px;
-    padding-left: 30px;
     font-family: 'RocknRoll One', sans-serif;
     color:rgb(170, 221, 255);   
     font-size:2px;
@@ -16,28 +14,20 @@ body {
 }
 .background{
     height: 100%;
+    background-color: rgba(0,0,0,0.8);
     background-size: 100% 100%;
     background-position: left top;
     background-repeat: no-repeat;
     margin: 0;
     padding: 0;
+    padding-top: 30px;
+    padding-left: 30px;
 }
 tr :nth-child(2){
     height: 30px;
 }
 table#disp{
     border-spacing: 20px 8px;
-}
-table#disp td{
-    text-align: center;
-    color: #7fa;
-    width: 80px;
-    height: 120px;
-    line-height: 1px;
-    text-shadow: 1px 1px 0 #000,
-                    -1px 1px 0 #000,
-                    1px -1px 0 #000,
-                    -1px -1px 0 #000;
 }
 .top {
     display: flex;
@@ -56,11 +46,12 @@ table#disp td{
     justify-content: center;
 }
 .btn{
+    background: var(--bg-off);
     vertical-align: middle;
     border: var(--border-common);
     font-size: 26px;
     text-align: center;
-    color: #7fa;
+    color: var(--color-release-eachkey);
     width: 80px;
     height: 120px;
     line-height: 1px;
@@ -95,13 +86,13 @@ warning {
     color: red;
 }
 release {
-    color: #dff;
+    color: var(--color-release-total);
     text-align: right;
 }
 density {
-    color: #dff;
+    color: var(--color-density);
     text-align: right;
 }
 notes {
-    color: #ffeeee;
+    color: var(--color-notes);
 }
