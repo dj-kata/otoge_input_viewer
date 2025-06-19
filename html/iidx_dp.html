@@ -12,65 +12,68 @@
     <div id="eventLog"></div>
 
     <warning>Not Connected!!</warning>
-    <div class="top">
-        <div class="container">
-            <div class="semicircle" id="semicircle1">
-                <div class="top-half"></div>
-                <div class="bottom-half"></div>
-            </div>
-            <div class="scr0" id="innerIndicator"></div>
-            <div class="scr1" id="innerIndicator"></div>
-        </div>
-
-        <div class="grid-keys">
-            <div class="keys-row">
-                <div id="btn2" class="btn"></div>
-                <div id="btn4" class="btn"></div>
-                <div id="btn6" class="btn"></div>
-
-            </div>
-            <div class="keys-row">
-                <div id="btn1" class="btn"></div>
-                <div id="btn3" class="btn"></div>
-                <div id="btn5" class="btn"></div>
-                <div id="btn7" class="btn"></div>
-
-            </div>
-        </div>
-
-        <div class="grid-keys">
-            <div class="keys-row">
-                <div id="btn9" class="btn"></div>
-                <div id="btn11" class="btn"></div>
-                <div id="btn13" class="btn"></div>
-
-            </div>
-            <div class="keys-row">
-                <div id="btn8" class="btn"></div>
-                <div id="btn10" class="btn"></div>
-                <div id="btn12" class="btn"></div>
-                <div id="btn14" class="btn"></div>
-
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="semicircle" id="semicircle2">
-                <div class="top-half"></div>
-                <div class="bottom-half"></div>
-            </div>
-            <div class="scr2" id="innerIndicator"></div>
-            <div class="scr3" id="innerIndicator"></div>
-        </div>
-    </div>
     <div class="background">
-        <table class="info">
-            <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
-            <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
-        </table>
+        <div class="top">
+            <div class="container">
+                <div class="semicircle" id="semicircle1">
+                    <div class="top-half"></div>
+                    <div class="bottom-half"></div>
+                </div>
+                <div class="scr0" id="innerIndicator"></div>
+                <div class="scr1" id="innerIndicator"></div>
+            </div>
+
+            <div class="grid-keys">
+                <div class="keys-row">
+                    <div id="btn2" class="btn"></div>
+                    <div id="btn4" class="btn"></div>
+                    <div id="btn6" class="btn"></div>
+
+                </div>
+                <div class="keys-row">
+                    <div id="btn1" class="btn"></div>
+                    <div id="btn3" class="btn"></div>
+                    <div id="btn5" class="btn"></div>
+                    <div id="btn7" class="btn"></div>
+
+                </div>
+            </div>
+
+            <div class="grid-keys">
+                <div class="keys-row">
+                    <div id="btn9" class="btn"></div>
+                    <div id="btn11" class="btn"></div>
+                    <div id="btn13" class="btn"></div>
+
+                </div>
+                <div class="keys-row">
+                    <div id="btn8" class="btn"></div>
+                    <div id="btn10" class="btn"></div>
+                    <div id="btn12" class="btn"></div>
+                    <div id="btn14" class="btn"></div>
+
+                </div>
+            </div>
+
+            <div class="container">
+                <div class="semicircle" id="semicircle2">
+                    <div class="top-half"></div>
+                    <div class="bottom-half"></div>
+                </div>
+                <div class="scr2" id="innerIndicator"></div>
+                <div class="scr3" id="innerIndicator"></div>
+            </div>
+        </div>
+        <div>
+            <table class="info">
+                <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+                <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr>
+            </table>
+        </div>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
+        var lr2mode = [0,0];
         var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
         var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
         var ws_url = 'ws://' + host + ':' + port
@@ -155,7 +158,10 @@
         }
 
         function onMessage(event) {
-            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            lr2mode[0] = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
+            lr2mode[1] = getComputedStyle(document.documentElement).getPropertyValue('--scratch-right-lr2-mode').trim();
+            var bg_keys_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-keys-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
             var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
             //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
@@ -181,7 +187,7 @@
                         $('#btn'+btn).css('background', bg_on_main)
                     }else{
                         $('#btn'+btn).css('box-shadow', 'none')
-                        $('#btn'+btn).css('background', bg_off)
+                        $('#btn'+btn).css('background', bg_keys_off)
                     }
                   }else if (e.type == 'axis'){ //// 皿
                     var direction = ""
@@ -253,13 +259,13 @@
         }
         
         function stop_scratch() {
-            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
             cur = new Date();
             for (i=0; i<4; i++){
                  if (cur-last_scr_time[i] > 150){
                     stopRotation(i/2)
                     $('.scr'+i).css('box-shadow', 'none')
-                    $('.scr'+i).css('background', bg_off)
+                    $('.scr'+i).css('background', bg_scratch_off)
                  }
             }
         }
