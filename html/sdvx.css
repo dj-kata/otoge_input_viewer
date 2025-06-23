@@ -1,8 +1,4 @@
 @charset "UTF-8";
-:root {
-    --port:8765;
-    --release-eachkey:1;
-}
 html{
     height: 100%;
 }
@@ -22,15 +18,14 @@ body {
 }
 .background{
     height: 100%;
+    background-color: rgba(0,0,0,0.8);
     background-size: 100% 100%;
     background-position: left top;
     background-repeat: no-repeat;
     margin: 0;
     padding: 0;
-}
-:root{
-    --num: 20;
-    --skip-no-update: 0; /* 1:更新のない行を飛ばす */
+    padding-top: 30px;
+    padding-left: 30px;
 }
 tr :nth-child(2){
     height: 30px;
@@ -42,15 +37,19 @@ table#LR{
     border-spacing: 10px 10px;
 }
 table#ABCD td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
-    color: #7fa;
+    text-align: center;
+    color: var(--color-release-eachkey);
     font-size: 32px;
     width: 120px;
     height: 120px;
     line-height: 1px;
-    text-align: center;
+    text-shadow: 1px 1px 0 #000,
+                    -1px 1px 0 #000,
+                    1px -1px 0 #000,
+                    -1px -1px 0 #000;
 }
 table#LR td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
-    color: #7fa;
+    color: var(--color-release-eachkey);
     font-size: 32px;
     width: 120px;
     height: 60px;
@@ -126,11 +125,13 @@ warning {
     color: red;
 }
 release {
-    color: #dff;
+    color: var(--color-release-total);
+    text-align: right;
 }
 density {
-    color: #dff;
+    color: var(--color-density);
+    text-align: right;
 }
 notes {
-    color: #ffeeee;
+    color: var(--color-notes);
 }
