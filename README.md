@@ -10,9 +10,8 @@ A tool for displaying inputs of IIDX-controller(eg. PHOENIX WAN, ...). It is eas
 This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/).
 
 <img src="https://github.com/user-attachments/assets/bdb98658-ca48-44f1-b605-40840372ef0b" width=500px>
-<img src="https://github.com/user-attachments/assets/90ca18f6-c383-4c9c-98ec-b0709ff94226" width=500px>  
 
-![image](https://github.com/user-attachments/assets/adb1d85c-b1b8-4215-85db-04f68acb8037)
+![image](https://github.com/user-attachments/assets/9c08a416-04e1-4937-b36a-21a1a47fde8e)
 
 # Usage (ツールの利用方法)
 1. [Releaseページ](https://github.com/dj-kata/otoge_input_viewer/releases)の一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
@@ -21,9 +20,8 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 4. OBSにキー入力状況を表示したい場合は、同梱のHTMLファイル(htmlフォルダ内)をOBSにドラッグ&ドロップする。
 5. SDVXで使いたい場合やリリース計算に使うノーツ数を変更したい場合は設定画面(```メニューバー内config```)から設定を変更してください。
 
-メイン画面において、使いたいコントローラの名前が表示されていてかつ、modeが正しければOKです。
-![image](https://github.com/user-attachments/assets/16f0f6e7-4dc8-4ec5-b488-41acead1b09d)
-
+メイン画面において、使いたいコントローラの名前が表示されていてかつ、modeが正しければOKです。  
+![image](https://github.com/user-attachments/assets/b69a9cbb-6d0a-4654-9c7b-b9f4424352d4)
 
 各ブラウザソースはデフォルトでは以下のように警告の文字が表示されていますが、
 正しく接続されてなんらかの表示命令を受信した時点でこの文字が消えるようになっています。
@@ -38,7 +36,7 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 - websocketで使うポート番号
 
 を設定することができます。  
-![image](https://github.com/user-attachments/assets/257ff66a-4ee7-4cf8-9353-ecf7600b29a8)  
+![image](https://github.com/user-attachments/assets/4cab31cc-6057-427f-8309-d940ca1f1ce3)
 
 同梱のHTMLファイルについては以下の通りとなっています。
 |ファイル名|推奨サイズ|内容|
