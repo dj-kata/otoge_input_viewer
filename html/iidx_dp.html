@@ -201,23 +201,61 @@
                         direction_other = 3-e.pos
                     }
                     last_scr_time[direction] = new Date();
-                    if (e.value == 1){
-                        $('.scr'+direction).css('box-shadow', pushed)
-                        $('.scr'+direction).css('background', bg_on_main)
-                        $('.scr'+direction_other).css('box-shadow', 'none')
-                        $('.scr'+direction_other).css('background', bg_off)
-                    }else{
-                        $('.scr'+direction).css('box-shadow', 'none')
-                        $('.scr'+direction).css('background', bg_off)
-                    }
-                    if (e.value == 1){
-                        if (direction==0){
-                            startRotation(e.controller_side, 'left')
+                    if (lr2mode[e.controller_side] == 0) {
+                        if (e.value == 1){
+                            $('.scr'+direction).css('box-shadow', pushed)
+                            $('.scr'+direction).css('background', bg_on_main)
+                            $('.scr'+direction_other).css('box-shadow', 'none')
+                            $('.scr'+direction_other).css('background', bg_scratch_off)
                         }else{
-                            startRotation(e.controller_side, 'right')
+                            $('.scr'+direction).css('box-shadow', 'none')
+                            $('.scr'+direction).css('background', bg_scratch_off)
                         }
-                    }else{
-                        stopRotation(e.controller_side)
+                        if (e.value == 1){
+                            if (direction==e.controller_side*2){
+                                startRotation(e.controller_side, 'right')
+                            }else{
+                                startRotation(e.controller_side, 'left')
+                            }
+                        }else{
+                            stopRotation(e.controller_side)
+                        }
+                    }else{ // lr2mode
+                        if (e.controller_side==0){
+                            var scr_u = '.scr0'
+                            var scr_l = '.scr1'
+                        }else{
+                            var scr_u = '.scr3'
+                            var scr_l = '.scr2'
+                        }
+                        if (e.value_org <0){
+                            var rotate_direction='right'
+                            if (e.controller_side==1){
+                                var rotate_direction='left'
+                            }
+                            startRotation(e.controller_side, rotate_direction)
+                            $(scr_u).css('box-shadow', pushed)
+                            $(scr_u).css('background', bg_on_main)
+                            $(scr_l).css('box-shadow', 'none')
+                            $(scr_l).css('background', bg_scratch_off)
+                        }
+                        else if (e.value_org > 0){
+                            var rotate_direction='left'
+                            if (e.controller_side==1){
+                                var rotate_direction='right'
+                            }
+                            startRotation(e.controller_side, rotate_direction)
+                            $(scr_l).css('box-shadow', pushed)
+                            $(scr_l).css('background', bg_on_main)
+                            $(scr_u).css('box-shadow', 'none')
+                            $(scr_u).css('background', bg_scratch_off)
+                        }else{
+                            stopRotation(e.controller_side)
+                            $(scr_u).css('box-shadow', 'none')
+                            $(scr_u).css('background', bg_scratch_off)
+                            $(scr_l).css('box-shadow', 'none')
+                            $(scr_l).css('background', bg_scratch_off)
+                        }
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
@@ -260,13 +298,18 @@
         
         function stop_scratch() {
             var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
+            lr2mode[0] = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
+            lr2mode[1] = getComputedStyle(document.documentElement).getPropertyValue('--scratch-right-lr2-mode').trim();
             cur = new Date();
             for (i=0; i<4; i++){
-                 if (cur-last_scr_time[i] > 150){
-                    stopRotation(i/2)
-                    $('.scr'+i).css('box-shadow', 'none')
-                    $('.scr'+i).css('background', bg_scratch_off)
-                 }
+                if (lr2mode[Math.floor(i/2)]==0){
+                    if (cur-last_scr_time[i] > 150){
+                        stopRotation(Math.floor(i/2))
+                        $('.scr'+i).css('box-shadow', 'none')
+                        $('.scr'+i).css('background', bg_scratch_off)
+                    }
+
+                }
             }
         }
 
