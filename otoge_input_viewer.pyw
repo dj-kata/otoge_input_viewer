@@ -446,6 +446,34 @@ class JoystickWebSocketServer:
             self.uptime_label.config(text=f"uptime: {uptime}")
             time.sleep(1)
 
+    def is_valid_event(self, event):
+        ret = False
+        if event.type == pygame.JOYBUTTONDOWN:
+            if self.settings.playmode == playmode.iidx_sp:
+                #if event.button <= 6 and event.instance_id == self.settings.connected_idx[0]:
+                if event.button <= 6 :
+                    ret = True
+            elif self.settings.playmode == playmode.iidx_dp:
+                #if event.button <= 6 and event.joy in self.settings.connected_idx:
+                if event.button <= 6 :
+                    ret = True
+            elif self.settings.playmode==playmode.sdvx:
+                if event.button >=1 and event.button<=6:
+                    ret = True
+        elif event.type == pygame.JOYAXISMOTION:
+            if self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp):
+                if event.axis==0:
+                    ret = True
+            elif self.settings.playmode==playmode.sdvx:
+                if event.axis in (0,1):
+                    ret = True
+        else:
+            ret = True
+        if self.settings.debug_mode:
+            logger.debug(f'event = {event}')
+            logger.debug(f'ret = {ret}')
+        return ret
+
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
         """
@@ -456,12 +484,8 @@ class JoystickWebSocketServer:
                     if self.settings.debug_mode:
                         logger.debug(event)
                     # モードごとに必要なノートのみ通すための判定処理
-                    if event.type == pygame.JOYBUTTONDOWN:
-                        if not ((self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp) and event.button<=6) or (self.settings.playmode==playmode.sdvx and event.button >=1 and event.button<=6)):
-                            continue
-                    if event.type == pygame.JOYAXISMOTION:
-                        if not ((self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp) and event.axis==0) or (self.settings.playmode==playmode.sdvx and event.axis in (0,1))):
-                            continue
+                    if not self.is_valid_event(event):
+                        continue
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
                     for i in range(2):
@@ -479,8 +503,10 @@ class JoystickWebSocketServer:
         event_data = None
 
         # TODO 切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
-        
-        controller_side = 0 if self.settings.connected_idx[0]==event.instance_id else 1
+        controller_side = 0
+        if hasattr(event, 'instance_id'):
+            if self.settings.connected_idx[0]!=event.joy:
+                controller_side = 1
         if event.type == pygame.JOYAXISMOTION:
             out_direction = -1
             if self.pre_scr_val[event.axis] is not None:
