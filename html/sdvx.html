@@ -74,10 +74,6 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
-        var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim();
-        var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
-        var ws_url = 'ws://' + host + ':' + port
-        console.log(ws_url)
         var ws = null;
         const eventLog = document.getElementById('eventLog')
         var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
@@ -87,6 +83,10 @@
         }
         function open() {
             if (ws == null){
+                var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim().replace(/['"]/g, '');
+                var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+                var ws_url = 'ws://' + host + ':' + port
+                console.log("WebSocket URL: "+ws_url)
                 ws = new WebSocket(ws_url);
                 ws.onmessage = onMessage;
                 ws.onclose = onClose;

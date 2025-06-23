@@ -1,6 +1,6 @@
 @charset "UTF-8";
 :root {
-    /* WebSocketのhost。処理タイミングの兼ね合いでこちらはアプリ側から変更する仕様 */
+    /* WebSocketのhost */
     --host:"localhost";
     /* WebSocketポート番号。処理タイミングの兼ね合いでこちらはアプリ側から変更する仕様 */
     --port:8765;
