@@ -43,9 +43,10 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 同梱のHTMLファイルについては以下の通りとなっています。
 |ファイル名|推奨サイズ|内容|
 |-|-|-|
-|html/iidx_1p.html|800×400|IIDX 1P側|
-|html/iidx_2p.html|800×400|IIDX 2P側|
-|html/sdvx.html|800×400|SDVX|
+|html/iidx_1p.html|700×400|IIDX 1P側|
+|html/iidx_2p.html|700×400|IIDX 2P側|
+|html/iidx_dp.html|1400×400|IIDX DP|
+|html/sdvx.html|870×430|SDVX|
 |html/stats_only.html|800×100|(リリース、密度、ノーツ数の数値のみ)|
 
 WebSocketのポート番号はデフォルトの8765で問題ないつもりですが、
@@ -55,8 +56,25 @@ WebSocketのポート番号はデフォルトの8765で問題ないつもりで�
 また、本アプリの新バージョンがリリースされた際には、
 アプリ起動時にアップデート機能が動くようになっています。
 
+## 2PC動作への対応
+2PCでの動作に対応しました。以下の構成を想定しています。
+- PC1(ゲームPC): ゲーム及びOtoge Input Viewerを起動
+- PC2(配信PC): OBSでOtoge Input Viewerの情報を表示
 
-## デザインのカスタマイズ
+PC1上でコマンドプロンプトからipconfigコマンドを実行してローカルIPアドレスを確認しておき、
+PC2上のOBSに本ツール用のHTMLをドラッグ&ドロップし、以下のcssを設定することで2PCでも使うことができます。  
+(例: PC1のローカルIPアドレスが```192.168.0.5```だった場合のPC2の設定)
+```css
+:root{
+    --host:"192.168.0.5";
+}
+```
+IPアドレスをダブルクオートで囲む必要がある点に注意してください。
+
+## HTMLのカスタマイズ
+詳しくは[カスタムCSSで設定できること](https://github.com/dj-kata/otoge_input_viewer/wiki/%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%A0CSS%E3%81%A7%E8%A8%AD%E5%AE%9A%E3%81%A7%E3%81%8D%E3%82%8B%E3%81%93%E3%81%A8)を参照。
+主な設定についてのみ記載します。
+
 ### 背景画像を設定する
 以下のように背景画像を設定することができます。  
 <img src="https://github.com/user-attachments/assets/90ca18f6-c383-4c9c-98ec-b0709ff94226" width=500px>  
@@ -79,22 +97,17 @@ rgba(0,0,0,0.65)の4つ目が不透明度で、この値が大きいほど暗く
 ```
 ![image](https://github.com/user-attachments/assets/96d26157-6f8f-4046-9c75-170737ac9876)
 
-### 背景に色を付ける
-(CSSの初歩みたいな内容ですが、一応書いておきます。)  
-OBSでは、ブラウザソースにデフォルトで以下のようなカスタムCSSが設定されます。
+## PHOENIX WANの皿をLR2モードで使う
+PHOENIX WANのLR2モード(E1+E2+5鍵で切り替え)にも対応しています。
+以下のカスタムCSSを設定してください。
+```css
+:root{
+    /* 1なら左皿(1P側)をLR2モードにする */
+    --scratch-left-lr2-mode: 1;
+    /* 1なら右皿(2P側)をLR2モードにする */
+    --scratch-right-lr2-mode: 1;
+}
 ```
-body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
-```
-背景色が透明にされてしまい、配信画面が明るい場合には以下のようになってしまいます。  
-![image](https://github.com/user-attachments/assets/ae442104-ef29-466e-9e05-c0b884c9989f)  
-
-そこで、このプロパティを以下のように修正することで背景を暗くすることができます。
-```
-body { background-color: rgba(0, 0, 0, 0.85); margin: 0px auto; overflow: hidden; }
-```
-![image](https://github.com/user-attachments/assets/2fbbb24f-b032-466a-830f-ba86ecf7e224)
-
-```0,0,0```の部分を変更することで、黒以外の色に寄せることもできます。必要に応じて変えてみてください。
 
 # 対応状況など
 PHOENIXWAN 2022+でのみ動作確認しています。
@@ -106,14 +119,15 @@ WebSocketサーバを立ててそこでブラウザソースと通信する仕�
 ウイルス対策ソフトのファイアウォールによって通信できない場合があるかもしれません。その際はお手数ですが通信の許可をするようにしてください。
 (作者はWindows Defenderしか使っていないため、市販のウイルス対策ソフトに関する質問には答えられません。)
 
-# 今後の予定
-また、以下機能を追加するかもしれません。
+複数のコントローラを同時に扱う都合でつPモードが色々と複雑になっており、
+コントローラの抜き差しを何度も行うと1P側/2P側の表示が合わなくなることがあります。
+気になる場合は、一度アプリを終了し、コントローラ全ての接続を解除してから、再度アプリを起動して接続し直すと綺麗にデバイス番号が振られて正しく動くと思われます。  
+DPモードについては作者がIIDXコンを2つ持っていないため、バグ発見時の対応にはお時間を頂く可能性が高いです。
 
-- IIDX DPでの動作
-- ボタン部分に画像を埋め込むための仕組み
-- カスタムCSSでできることの追加
-  - ボタンや皿部分への画像の追加
-  - 押下時の光り方のカスタマイズ
+# 今後の予定
+以下機能を追加するかもしれません。
+
+- GuitarFreaks(コナステ版公式コントローラ)への対応
 
 # その他
 不具合報告などについては、
