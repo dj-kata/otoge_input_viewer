@@ -61,6 +61,7 @@ class JoystickWebSocketServer:
         self.pre_scr_direction = [-1, -1]
         self.list_density = []
         self.settings = Settings()
+        logger.debug(f'settings = {self.settings.__dict__}')
 
         self.joystick = [None, None]
 
@@ -347,6 +348,8 @@ class JoystickWebSocketServer:
             logger.error(f"ジョイパッド接続エラー: {e}")
 
     def init_pygame(self):
+        """初回起動時のコントローラ初期化処理
+        """
         pygame.init()
         pygame.joystick.init()
         count = pygame.joystick.get_count()
@@ -467,7 +470,7 @@ class JoystickWebSocketServer:
             elif self.settings.playmode==playmode.sdvx:
                 if event.axis in (0,1):
                     ret = True
-        else:
+        elif event.type in (pygame.JOYBUTTONUP, pygame.JOYDEVICEADDED, pygame.JOYDEVICEREMOVED):
             ret = True
         if self.settings.debug_mode:
             logger.debug(f'event = {event}')
@@ -504,7 +507,7 @@ class JoystickWebSocketServer:
 
         # TODO 切断時の対策(現IDの接続ならNoneにする)、再接続時の対策
         controller_side = 0
-        if hasattr(event, 'instance_id'):
+        if hasattr(event, 'joy'):
             if self.settings.connected_idx[0]!=event.joy:
                 controller_side = 1
         if event.type == pygame.JOYAXISMOTION:
@@ -554,9 +557,8 @@ class JoystickWebSocketServer:
             else:
                 if self.settings.playmode != playmode.iidx_dp:
                     if pygame.joystick.get_count() == 2:
-                        for i in range(2):
-                            if self.joystick[i] is None:
-                                self.reconnect_joystick(i, event.device_index)
+                        if self.joystick[0] is None:
+                            self.reconnect_joystick(0, event.device_index)
         elif event.type == pygame.JOYDEVICEREMOVED:
             for i in range(2):
                 if self.joystick[i].get_instance_id() == event.instance_id:
