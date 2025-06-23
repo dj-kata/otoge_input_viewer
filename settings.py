@@ -24,7 +24,6 @@ class Settings:
         self.size_release_hist = 200
         self.size_release_key_hist = 30
         self.density_interval = 0.5
-        self.host = 'localhost'
         self.port = 8765
         self.connected_idx = [None,None]
         self.debug_mode = False # コントローラ入力の全dumpなど
@@ -40,7 +39,7 @@ class Settings:
     def disp(self):
         print(f"lx, ly = {self.lx}, {self.ly}")
         print(f"ln_threshold={self.ln_threshold}")
-        print(f"host:port = {self.host}:{self.port}")
+        print(f"port = {self.port}")
         print(f"size_release_hist={self.size_release_hist}")
         print(f"size_release_key_hist={self.size_release_key_hist}")
         print(f"density_interval={self.density_interval}")
@@ -122,11 +121,6 @@ class SettingsDialog(tk.Toplevel):
         self.density_interval_entry = ttk.Entry(frame)
         self.density_interval_entry.grid(row=4, column=1, padx=5, pady=5)
 
-        ttk.Label(frame, text="WebSocketホスト: (default=localhost)").grid(row=5, column=0, sticky=tk.W)
-        self.host_entry = ttk.Entry(frame)
-        self.host_entry.grid(row=5, column=1, padx=5, pady=5)
-        ToolTip(self.host_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
-
         ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=6, column=0, sticky=tk.W)
         self.port_entry = ttk.Entry(frame)
         self.port_entry.grid(row=6, column=1, padx=5, pady=5)
@@ -153,7 +147,6 @@ class SettingsDialog(tk.Toplevel):
         self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
         self.size_release_key_hist_entry.insert(0, str(self.settings.size_release_key_hist))
         self.density_interval_entry.insert(0, str(self.settings.density_interval))
-        self.host_entry.insert(0, str(self.settings.host))
         self.port_entry.insert(0, str(self.settings.port))
         self.debug_mode_var.set(self.settings.debug_mode)
         self.auto_update_var.set(self.settings.auto_update)
@@ -170,14 +163,11 @@ class SettingsDialog(tk.Toplevel):
         """設定値をファイルに保存
         """
         try:
-            host = self.host_entry.get()
             port = int(self.port_entry.get())
             ln_threshold = int(self.ln_threshold.get())
             size_release_hist = int(self.size_release_hist_entry.get())
             size_release_key_hist = int(self.size_release_key_hist_entry.get())
             density_interval = float(self.density_interval_entry.get())
-            if (host != 'localhost') and (not self.is_valid_ip(host)):
-                raise ValueError("hostが無効です")
             if not (1 <= port <= 65535):
                 raise ValueError("ポート番号が無効です")
             if not (ln_threshold > 0):
@@ -188,7 +178,6 @@ class SettingsDialog(tk.Toplevel):
                 raise ValueError("リリース速度計算用ノーツ数が無効です")
             if not (size_release_key_hist > 0):
                 raise ValueError("単鍵リリース速度計算用ノーツ数が無効です")
-            self.settings.host = host
             self.settings.port = port
             self.settings.ln_threshold = ln_threshold
             self.settings.size_release_hist = size_release_hist
