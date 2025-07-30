@@ -10,3 +10,4 @@ dist/*
 html/websocket.css
 settings.json
 update.exe
+.pyarmor/pack/*
