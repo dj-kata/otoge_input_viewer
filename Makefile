@@ -17,3 +17,6 @@ clean:
 	@rm -rf $(target)
 	@rm -rf $(outdir)/update.exe
 	@rm -rf __pycache__
+
+test:
+	@$(wuv) run otoge_input_viewer.pyw
