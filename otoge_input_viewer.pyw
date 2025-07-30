@@ -20,6 +20,7 @@ import requests
 import traceback
 import urllib
 import webbrowser
+import icon
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -47,7 +48,8 @@ class JoystickWebSocketServer:
         self.time_start = time.perf_counter()
         self.root = root
         self.root.title("Otoge Input Viewer")
-        self.root.iconbitmap(default='icon.ico')
+        self.icon = tk.PhotoImage(data=icon.icon_data)
+        self.root.iconphoto(False, self.icon)
         self.scratch_queue = Queue() # スクラッチだけoff用処理も入れるため分ける
         self.calc_queue = Queue()  # 計算用のキュー、全イベントをここに流す
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
