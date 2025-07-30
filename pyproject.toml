@@ -1,0 +1,15 @@
+[project]
+name = "otoge-input-viewer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bs4>=0.0.2",
+    "pillow>=11.3.0",
+    "pyarmor>=9.1.8",
+    "pygame>=2.6.1",
+    "pyinstaller>=6.14.2",
+    "requests>=2.32.4",
+    "websockets>=15.0.1",
+]
