@@ -1,0 +1,3 @@
+[pack]
+pyi_options =  --console -w -i icon.ico
+
