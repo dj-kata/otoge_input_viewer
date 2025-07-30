@@ -1,5 +1,6 @@
 # how to make: 16x16のgif/png画像を用意し、
-# Powershellからcertutil -encode a.gif icon.txt
+# $ convert -background yellow -extent 106x106+15+0 -resize 32x32 tanuki_face.png icon.gif
+# Powershellから $ certutil -encode a.gif icon.txt
 icon_data = '''
 R0lGODlhIAAgAPcAAAEBAQkIByEeGTw1Di8iGi8lFDQlHTcpGzgqHDwxFyonITcn
 ITgnIToqIjQvKD8wJ0A4EEIvJkQxJ0UzKUo1K0w5Lks5JFA6Lk08MUI9NFM+MklC
