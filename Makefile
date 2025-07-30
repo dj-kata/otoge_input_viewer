@@ -9,7 +9,6 @@ $(target): $(srcs)
 	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile otoge_input_viewer.pyw
 	@cp version.txt $(outdir)
 	@cp -a html $(outdir)
-	@cp icon.ico $(outdir)
 $(outdir)/update.exe: update.py
 	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile $<
 

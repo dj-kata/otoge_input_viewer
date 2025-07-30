@@ -1,3 +1,3 @@
 [pack]
-pyi_options =  --console -w -i icon.ico
+pyi_options =  --noconsole
 
