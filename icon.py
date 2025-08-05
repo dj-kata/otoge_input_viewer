@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # how to make: 16x16のgif/png画像を用意し、
 # $ convert -background yellow -extent 106x106+15+0 -resize 32x32 tanuki_face.png icon.gif
 # Powershellから $ certutil -encode a.gif icon.txt
