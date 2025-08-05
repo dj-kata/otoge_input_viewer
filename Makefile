@@ -9,6 +9,7 @@ all: $(target_zip)
 $(target_zip): $(target) $(outdir)/update.exe $(html_files) version.txt
 	@cp version.txt $(outdir)
 	@cp -a html $(outdir)
+	@rm -rf $(outdir)/log
 	@zip $(target_zip) $(outdir)/* $(outdir)/*/*
 
 $(target): $(srcs)
@@ -19,7 +20,7 @@ $(outdir)/update.exe: update.py
 dist: 
 	@cp -a html to_bin/
 	@cp -a version.txt to_bin/
-	@cp -a $outdir/*.exe to_bin/
+	@cp -a $(outdir)/*.exe to_bin/
 
 clean:
 	@rm -rf $(target)
