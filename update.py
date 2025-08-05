@@ -35,7 +35,7 @@ hdl.setFormatter(hdl_formatter)
 logger.addHandler(hdl)
 
 class GitHubUpdater:
-    def __init__(self, github_author='', github_repo='', current_version='', main_exe_name=None):
+    def __init__(self, github_author='', github_repo='', current_version='', main_exe_name=None, updator_exe_name=None):
         """
         GitHub自動アップデータの初期化
         
@@ -43,11 +43,13 @@ class GitHubUpdater:
             github_repo (str): GitHubリポジトリ（例: "username/repository"）
             current_version (str): 現在のバージョン（例: "1.0.0"）
             main_exe_name (str): メインプログラムのexe名（例: "main.exe"）
+            updator_exe_name (str): アップデート用プログラムのexe名 (例: "update.exe"）
         """
         self.github_author = github_author
         self.github_repo = github_repo
         self.current_version = current_version
         self.main_exe_name = main_exe_name or "main.exe"
+        self.updator_exe_name = updator_exe_name or "update.exe"
         self.base_dir = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path.cwd()
         self.temp_dir = self.base_dir / "tmp"
         self.backup_dir = self.base_dir / "backup"
@@ -206,10 +208,14 @@ class GitHubUpdater:
         for f in p.glob('**/*.*'):
             try:
                 base = str(f.relative_to(f'tmp/{self.github_repo}'))
-                logger.debug(f)
-                shutil.move(str(f), target_dir+'/'+base)
+                if self.updator_exe_name in str(f):
+                    shutil.copy2(str(f), target_dir+'/new_'+base)
+                    logger.debug(f"from={str(f)}, to={target_dir+'/new_'+base}")
+                else:
+                    shutil.move(str(f), target_dir+'/'+base)
+                    logger.debug(f"from={str(f)}, to={target_dir+'/'+base}")
             except Exception:
-                if 'update.exe' not in str(f):
+                if self.updator_exe_name not in str(f):
                     failed_list.append(f)
                 logger.debug(f"error! ({f})")
                 logger.debug(traceback.format_exc())
@@ -219,77 +225,22 @@ class GitHubUpdater:
             out = '更新に失敗したファイル(tmp/tmp.zipから手動展開してください): '
             out += '\n'.join(failed_list)
 
-        # # 更新完了後にメインプログラムを再起動するためのバッチファイルを作成
-        # main_exe_source = self.base_dir / self.main_exe_name
-        # new_exe_path = self.base_dir / f"new_{self.main_exe_name}"
-        # shutil.copy2(main_exe_source, new_exe_path)
-        # self.create_restart_script(new_exe_path)
-
-    def replace_files(self, source_dir):
-        """ファイルを置き換え"""
-        logger.debug('replace_files')
-        files_to_replace = []
-        
-        # 置き換え対象ファイルを収集
-        for item in source_dir.rglob('*'):
-            if item.is_file():
-                relative_path = item.relative_to(source_dir)
-                target_path = self.base_dir / relative_path
-                
-                # 実行中のexeファイル以外を置き換え対象に
-                if item.name != self.main_exe_name:
-                    files_to_replace.append((item, target_path))
-                    logger.debug(f'item: {item}, target_path: {target_path}')
-        
-        # ファイルを置き換え
-        total_files = len(files_to_replace)
-        for i, (source_file, target_file) in enumerate(files_to_replace):
-            logger.debug(f"processing: {target_file}")
-            self.update_status(f"更新中: {target_file.name}", 85 + (i / total_files) * 10)
-            
-            # ディレクトリを作成
-            target_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            # ファイルをコピー
-            shutil.copy2(source_file, target_file)
-        
-        logger.debug(f'copy files done!')
-        # メインexeファイルの処理
-        main_exe_source = source_dir / self.main_exe_name
-        if main_exe_source.exists():
-            # 新しいexeファイルを一時的な名前で保存
-            new_exe_path = self.base_dir / f"new_{self.main_exe_name}"
-            shutil.copy2(main_exe_source, new_exe_path)
-            
-            # 更新完了後にメインプログラムを再起動するためのバッチファイルを作成
-            self.create_restart_script(new_exe_path)
-        logger.debug(f'update exe file done!')
-    
     def create_restart_script(self, new_exe_path):
+        logger.info('')
         """再起動用スクリプト作成"""
         if sys.platform.startswith('win'):
             script_path = self.base_dir / "restart_update.bat"
             script_content = f"""@echo off
 timeout /t 2 /nobreak >nul
-move "{new_exe_path}" "{self.base_dir / self.main_exe_name}"
-start "" "{self.base_dir / self.main_exe_name}"
+move "{new_exe_path}" "{self.base_dir / self.updator_exe_name}"
+start "" "{self.main_exe_name}"
 del "%~f0"
 """
             with open(script_path, 'w', encoding='shift_jis') as f:
                 f.write(script_content)
-        else:
-            script_path = self.base_dir / "restart_update.sh"
-            script_content = f"""#!/bin/bash
-sleep 2
-mv "{new_exe_path}" "{self.base_dir / self.main_exe_name}"
-chmod +x "{self.base_dir / self.main_exe_name}"
-"{self.base_dir / self.main_exe_name}" &
-rm "$0"
-"""
-            with open(script_path, 'w') as f:
-                f.write(script_content)
             os.chmod(script_path, 0o755)
         
+        logger.info(f"path:{script_path}")
         return script_path
     
     def cleanup(self):
@@ -374,12 +325,12 @@ rm "$0"
         Returns:
             bool: アップデートが実行された場合True
         """
-        logger.debug('')
+        logger.info('check and update')
         try:
             self.create_gui()
             # アップデート確認（GUIなし）
             is_update_available, latest_version, download_url = self.check_for_updates()
-            logger.debug(f"available:{is_update_available}, latest:{latest_version}, url:{download_url}")
+            logger.info(f"available:{is_update_available}, latest:{latest_version}, url:{download_url}")
             
             if is_update_available:
                 # 確認ダイアログ
@@ -398,17 +349,22 @@ rm "$0"
                         try:
                             # ダウンロード
                             zip_path = self.temp_dir / f"update_{latest_version}.zip"
-                            logger.debug(f'zip_path: {zip_path}')
+                            logger.info(f'zip_path: {zip_path}')
                             self.temp_dir.mkdir(exist_ok=True)
                             
-                            logger.debug('download')
+                            logger.info('download')
                             self.download_file(download_url, zip_path)
                             self.extract_zip_file(zip_path)
-                            logger.debug('replace')
+                            logger.info('replace')
                             self.replace_files2()
                             
+                            new_exe_path = Path('.') / f"new_{self.updator_exe_name}"
+                            # 更新完了後にメインプログラムを再起動するためのバッチファイルを作成
+                            self.create_restart_script(new_exe_path)
+
                             self.update_status("更新完了！プログラムを再起動します...", 100)
-                            self.root.after(2000, self.restart_program)
+                            #self.root.after(2000, self.restart_program)
+                            self.restart_program()
                             
                         except Exception as e:
                             logger.error(traceback.format_exc())
@@ -432,6 +388,7 @@ rm "$0"
     
     def restart_program(self):
         """プログラム再起動"""
+        logger.info('retart program')
         script_path = self.base_dir / ("restart_update.bat" if sys.platform.startswith('win') 
                                      else "restart_update.sh")
         if script_path.exists():
@@ -458,7 +415,8 @@ def main():
         github_author='dj-kata',
         github_repo='otoge_input_viewer',
         current_version=SWVER,           # 現在のバージョン
-        main_exe_name="update.exe"           # メインプログラムのexe名
+        main_exe_name="otoge_input_viewer.exe",  # メインプログラムのexe名
+        updator_exe_name="update.exe",           # アップデート用プログラムのexe名
     )
     
     # メインプログラムから呼び出す場合
