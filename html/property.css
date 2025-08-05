@@ -7,15 +7,23 @@
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
     --border-common: #ccc solid 4px;
     /* 鍵盤ごとリリース速度表示のon/off (0:off, 1:on) */
-    --disp-release-each-key:1;
-    /* 鍵盤ごとリリース速度表示の色 */
+    --disp-release-eachkey:1;
+    /* リリース速度表示(鍵盤ごと)の色 */
     --color-release-eachkey: #aaa;
-    /* 鍵盤ごとリリース速度表示の色 */
+    /* リリース速度表示(total)の色 */
     --color-release-total: #dff;
     /* 密度表示の色 */
     --color-density: #dff;
     /* ノーツ数表示の色 */
     --color-notes: #fee;
+    /* リリース速度表示(鍵盤ごと)のフォントサイズ */
+    --font-size-release-eachkey: 32px;
+    /* リリース速度表示(total)のフォントサイズ */
+    --font-size-release-total: 32px;
+    /* 密度表示のフォントサイズ */
+    --font-size-density: 32px;
+    /* ノーツ数表示のフォントサイズ */
+    --font-size-notes: 32px;
     /* 鍵盤を押していないときの背景色 */
     --bg-keys-off: rgba(0,0,0, 0.98);
     /* スクラッチを回していないときの背景色 */
@@ -34,4 +42,28 @@
     --scratch-left-lr2-mode: 0;
     /* 1なら右皿をLR2モードにする */
     --scratch-right-lr2-mode: 0;
+    /* 鍵盤に表示するリリース値を整数に丸める */
+    --release-eachkey-int: 0;
+
+    /* ***鍵盤ごとの個別リリース関連設定*** */
+    /* リリース値小～中の境界値 */
+    --threshold-release-low: 65.0;
+    /* リリース値中～大の境界値 */
+    --threshold-release-high: 80.0;
+    /* 鍵盤の枠線の幅(0なら非表示) */
+    --outline-release-width: 0px;
+    /* 鍵盤の枠線のオフセット(widthと同じ幅で負の値にするとよい) */
+    --outline-release-offset: -8px;
+    /* リリース値小の場合の色 */
+    --bg-release-low: rgba(55,255,120,0.0); /*背景色*/
+    --outline-release-low: #5fa solid var(--outline-release-width); /*アウトラインの色*/
+    --color-release-eachkey-low: #aaa; /*文字色*/
+    /* リリース値中の場合の色 */
+    --bg-release-mid: rgba(255,255,120,0.0); /*背景色*/
+    --outline-release-mid: #ffa solid var(--outline-release-width); /*アウトラインの色*/
+    --color-release-eachkey-mid: #aaa; /*文字色*/
+    /* リリース値大の場合の色 */
+    --bg-release-high: rgba(255,70,50,0.0); /*背景色*/
+    --outline-release-high: #f22 solid var(--outline-release-width); /*アウトラインの色*/
+    --color-release-eachkey-high: #aaa; /*文字色*/
 }

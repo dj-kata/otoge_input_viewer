@@ -39,7 +39,7 @@ table#LR{
 table#ABCD td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
     text-align: center;
     color: var(--color-release-eachkey);
-    font-size: 32px;
+    font-size: var(--font-size-release-eachkey);
     width: 120px;
     height: 120px;
     line-height: 1px;
@@ -50,26 +50,28 @@ table#ABCD td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイ
 }
 table#LR td{ /* 鍵盤用テーブル内のtdサイズ、鍵盤領域のレイアウトを指定 */
     color: var(--color-release-eachkey);
-    font-size: 32px;
+    font-size: var(--font-size-release-eachkey);
     width: 120px;
     height: 60px;
     line-height: 1px;
     text-align: center;
 }
 td.btn{
-    background: var(--bg-off);
+    background: var(--bg-keys-off);
     box-shadow: none;
     border: var(--border-common);
 }
 td.btn-u{
-    background: var(--bg-off);
+    background: var(--bg-keys-off);
     box-shadow: none;
     border: var(--border-common);
+    outline-offset: var(--outline-release-offset);
 }
 td.btn-d{
-    background: var(--bg-off);
+    background: var(--bg-keys-off);
     box-shadow: none;
     border: var(--border-common);
+    outline-offset: var(--outline-release-offset);
 }
 table.info{
     text-align: left;
@@ -77,19 +79,15 @@ table.info{
     border-spacing: 0 0;
     line-height: 2px;
 }
-table.info td:nth-child(1){
-    padding-left: 50px;
-    padding-right: 10px;
-}
 table.info td:nth-child(2){
     text-align: right;
-    padding-right: 15px;
+    padding-right: 40px;
 }
 table.info td:nth-child(4){
-    padding-left: 50px;
+    padding-right: 40px;
 }
 .tumami0{
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 70% 0% 0% 70%;
     box-shadow: 0 0 0 2px #cccccc;
@@ -105,7 +103,7 @@ table.info td:nth-child(4){
     box-shadow: none;
 }
 .tumami1 {
-    background: var(--bg-off);
+    background: var(--bg-scratch-off);
     border: var(--border-common);
     border-radius: 0 100% 100% 0;
     box-shadow: 0 0 0 2px #cccccc;
@@ -125,13 +123,16 @@ warning {
     color: red;
 }
 release {
+    font-size: var(--font-size-release-total);
     color: var(--color-release-total);
     text-align: right;
 }
 density {
+    font-size: var(--font-size-density);
     color: var(--color-density);
     text-align: right;
 }
 notes {
+    font-size: var(--font-size-notes);
     color: var(--color-notes);
 }

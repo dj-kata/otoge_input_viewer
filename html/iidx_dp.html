@@ -77,6 +77,7 @@
         var ws = null;
         const eventLog = document.getElementById('eventLog')
         var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
+        var last_release = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]; // 背景色を変更するために覚えておく
         const semicircle = [document.getElementById('semicircle1'),document.getElementById('semicircle2')]
         let isRotating = [false,false];
         let currentDirection = [null,null];
@@ -114,10 +115,14 @@
             if (!isRotating[controller_side]) return;
             
             // 角度を増減
+            var angle = ANGLE_INCREMENT;
+            if (controller_side==0){
+                angle = -ANGLE_INCREMENT;
+            }
             if (currentDirection[controller_side] === 'right') {
-                currentAngle[controller_side] += ANGLE_INCREMENT;
+                currentAngle[controller_side] += angle;
             } else if (currentDirection[controller_side] === 'left') {
-                currentAngle[controller_side] -= ANGLE_INCREMENT;
+                currentAngle[controller_side] -= angle;
             }
             
             // 回転を適用
@@ -167,7 +172,19 @@
             var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
             //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
             var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
-            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-each-key').trim();
+            var threshold_release_low = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-low').trim());
+            var threshold_release_high = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-high').trim());
+            var bg_release_low = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-low').trim();
+            var bg_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-mid').trim();
+            var bg_release_high = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-high').trim();
+            var outline_release_low = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-low').trim();
+            var outline_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-mid').trim();
+            var outline_release_high = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-high').trim();
+            var color_release_eachkey_low = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-low').trim();
+            var color_release_eachkey_mid = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-mid').trim();
+            var color_release_eachkey_high = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-high').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-eachkey').trim();
+            var release_eachkey_int = getComputedStyle(document.documentElement).getPropertyValue('--release-eachkey-int').trim();
             var pushed = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
             pushed += ', 0 0 40px ' + bg_on_main
             pushed += ', 0 0 20px ' + bg_on_main
@@ -261,14 +278,33 @@
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
                   }else if (e.type == 'release_eachkey'){
+                    var btn = e.button+1
+                    last_release[btn] = Number(e.value)
                     if (disp_release_each_key == 1){
                         var btn = e.button+1
-                        $('#btn'+btn).text(e.value)
+                        if (release_eachkey_int == 1){
+                            $('#btn'+btn).text(Math.round(e.value))
+                        }else{
+                            $('#btn'+btn).text(e.value)
+                        }
+                    }
+                    if (last_release[btn] <= threshold_release_low){
+                        $('#btn'+btn).css('background', bg_release_low)
+                        $('#btn'+btn).css('outline', outline_release_low)
+                        $('#btn'+btn).css('color', color_release_eachkey_low)
+                    }else if (last_release[btn] <= threshold_release_high){
+                        $('#btn'+btn).css('background', bg_release_mid)
+                        $('#btn'+btn).css('outline', outline_release_mid)
+                        $('#btn'+btn).css('color', color_release_eachkey_mid)
+                    }else{
+                        $('#btn'+btn).css('background', bg_release_high)
+                        $('#btn'+btn).css('outline', outline_release_high)
+                        $('#btn'+btn).css('color', color_release_eachkey_high)
                     }
                   }else if (e.type == 'density'){
                     $('density').html(e.value)
                   }else if (e.type == 'notes'){
-                    $('notes').html(e.value)
+                    $('notes').html(e.value.toLocaleString())
                   }
                 })
             } catch (e) {
