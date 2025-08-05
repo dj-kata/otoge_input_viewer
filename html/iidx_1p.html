@@ -145,9 +145,6 @@
             var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
             var threshold_release_low = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-low').trim());
             var threshold_release_high = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-high').trim());
-            var bg_release_low = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-low').trim();
-            var bg_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-mid').trim();
-            var bg_release_high = getComputedStyle(document.documentElement).getPropertyValue('--bg-release-high').trim();
             var outline_release_low = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-low').trim();
             var outline_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-mid').trim();
             var outline_release_high = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-high').trim();
@@ -239,15 +236,12 @@
                         }
                     }
                     if (last_release[btn] <= threshold_release_low){
-                        $('#btn'+btn).css('background', bg_release_low)
                         $('#btn'+btn).css('outline', outline_release_low)
                         $('#btn'+btn).css('color', color_release_eachkey_low)
                     }else if (last_release[btn] <= threshold_release_high){
-                        $('#btn'+btn).css('background', bg_release_mid)
                         $('#btn'+btn).css('outline', outline_release_mid)
                         $('#btn'+btn).css('color', color_release_eachkey_mid)
                     }else{
-                        $('#btn'+btn).css('background', bg_release_high)
                         $('#btn'+btn).css('outline', outline_release_high)
                         $('#btn'+btn).css('color', color_release_eachkey_high)
                     }

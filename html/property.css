@@ -55,15 +55,12 @@
     /* 鍵盤の枠線のオフセット(widthと同じ幅で負の値にするとよい) */
     --outline-release-offset: -8px;
     /* リリース値小の場合の色 */
-    --bg-release-low: rgba(55,255,120,0.0); /*背景色*/
     --outline-release-low: #5fa solid var(--outline-release-width); /*アウトラインの色*/
     --color-release-eachkey-low: #aaa; /*文字色*/
     /* リリース値中の場合の色 */
-    --bg-release-mid: rgba(255,255,120,0.0); /*背景色*/
     --outline-release-mid: #ffa solid var(--outline-release-width); /*アウトラインの色*/
     --color-release-eachkey-mid: #aaa; /*文字色*/
     /* リリース値大の場合の色 */
-    --bg-release-high: rgba(255,70,50,0.0); /*背景色*/
     --outline-release-high: #f22 solid var(--outline-release-width); /*アウトラインの色*/
     --color-release-eachkey-high: #aaa; /*文字色*/
 }

@@ -76,8 +76,15 @@ td.btn-d{
 table.info{
     text-align: left;
     font-size: 32px;
+    line-height: 2px;
+    padding-top: 0px;
+    padding-left: 13px;
     border-spacing: 0 0;
     line-height: 2px;
+    text-shadow: 2px 2px 0 #000,
+                    -2px 2px 0 #000,
+                    2px -2px 0 #000,
+                    -2px -2px 0 #000;
 }
 table.info td:nth-child(2){
     text-align: right;

@@ -67,6 +67,7 @@ table#disp{
 table.info{
     text-align: left;
     font-size: 32px;
+    padding-top: 20px;
     padding-left: 13px;
     border-spacing: 0 0;
     line-height: 2px;
@@ -75,9 +76,15 @@ table.info{
                     2px -2px 0 #000,
                     -2px -2px 0 #000;
 }
+table.info td:nth-child(1){
+    min-width: 25%;
+}
 table.info td:nth-child(2){
     text-align: right;
     padding-right: 40px;
+}
+table.info td:nth-child(3){
+    min-width: 25%;
 }
 table.info td:nth-child(4){
     padding-right: 40px;
@@ -87,13 +94,16 @@ warning {
     color: red;
 }
 release {
+    font-size: var(--font-size-release-total);
     color: var(--color-release-total);
     text-align: right;
 }
 density {
+    font-size: var(--font-size-density);
     color: var(--color-density);
     text-align: right;
 }
 notes {
+    font-size: var(--font-size-notes);
     color: var(--color-notes);
 }
