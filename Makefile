@@ -1,14 +1,18 @@
 wuv=/mnt/c/Users/katao/.local/bin/uv.exe
 outdir=otoge_input_viewer
 target=$(outdir)/otoge_input_viewer.exe
+target_zip=otoge_input_viewer.zip
 srcs=$(subst update.py,,$(wildcard *.py)) $(wildcard *.pyw)
+html_files=$(wildcard html/*.*)
 
-
-all: $(target) $(outdir)/update.exe
-$(target): $(srcs)
-	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile otoge_input_viewer.pyw
+all: $(target_zip)
+$(target_zip): $(target) $(outdir)/update.exe $(html_files) version.txt
 	@cp version.txt $(outdir)
 	@cp -a html $(outdir)
+	@zip $(target_zip) $(outdir)/* $(outdir)/*/*
+
+$(target): $(srcs)
+	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile otoge_input_viewer.pyw
 $(outdir)/update.exe: update.py
 	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile $<
 
