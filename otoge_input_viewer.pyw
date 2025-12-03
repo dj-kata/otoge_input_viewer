@@ -387,7 +387,9 @@ class JoystickWebSocketServer:
                     if (len(self.list_density) == 0) or (cur_time == self.list_density[0]):
                         density = 0.0
                     else:
-                        density = len(self.list_density) / (cur_time - self.list_density[0])
+                        #density = len(self.list_density) / (cur_time - self.list_density[0])
+                        density = len(self.list_density) / self.settings.density_interval
+                        # logger.debug(f"len:{len(self.list_density)}, {self.list_density}, width:{cur_time - self.list_density[0]}s, density:{density:.2f}")
                     event_data = {
                         'type': 'density',
                         'value': f"{density:.1f}"
