@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>Scratch Speed Viewer</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: rgba(0, 0, 0, 0.99);
+            font-family: 'RocknRoll One', 'Segoe UI', sans-serif;
+            color: #fff;
+        }
+
+        warning {
+            display: block;
+            font-size: 40px;
+            color: red;
+        }
+
+        .background {
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            background-size: 100% 100%;
+            padding: 16px 20px;
+            box-sizing: border-box;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 14px;
+        }
+
+        .info-block {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .info-value {
+            font-size: 32px;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+            min-width: 90px;
+            height: 1.2em;
+            line-height: 1.2em;
+            text-align: right;
+            text-shadow:
+                2px  2px 0 #000,
+               -2px  2px 0 #000,
+                2px -2px 0 #000,
+               -2px -2px 0 #000;
+            transition: color 0.2s;
+        }
+
+        /* 連続枚数: iidx.css の --color-notes (#fee系) に合わせて黄色 */
+        #count       { color: var(--color-notes, #fee); }
+        /* 間隔: アクティブ時は白、非アクティブは暗く */
+        #interval    { color: var(--color-release-total, #dff); }
+        #interval.inactive { color: #556; }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+    </style>
+</head>
+<body>
+    <warning id="warning">Not Connected!!</warning>
+    <div class="background">
+        <div class="info-row">
+            <div class="info-block">
+                <span class="info-label">連続枚数</span>
+                <span class="info-value" id="count">—</span>
+            </div>
+            <div class="info-block">
+                <span class="info-label">間隔</span>
+                <span class="info-value inactive" id="interval">—</span>
+            </div>
+        </div>
+        <canvas id="chart" width="570" height="160"></canvas>
+    </div>
+
+    <script>
+        // --- WebSocket ---
+        var ws = null;
+        function open() {
+            if (ws != null) return;
+            var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim().replace(/['"]/g, '');
+            var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+            var url  = 'ws://' + host + ':' + port;
+            console.log('WebSocket URL: ' + url);
+            ws = new WebSocket(url);
+            ws.onmessage = onMessage;
+            ws.onclose   = onClose;
+        }
+        function onClose() {
+            document.getElementById('warning').textContent = 'Not Connected!!';
+            ws = null;
+            setTimeout(open, 3000);
+        }
+
+        // --- 定数 ---
+        var SCR_RESET_MS    = 400;  // 無入力でリセットするまでの時間 (ms)
+        var SAME_DIR_GATE   = 100;  // 同方向入力の途切れ判定 (ms)
+        var BPM          = 120;  // 固定BPM
+        var CHART_PAD_L  = 4;    // グラフ左余白 (px)
+        var CHART_BAR_W  = 10;   // バー1本の幅 (px)
+        var CHART_H      = 160;  // グラフ高さ (px)
+        var CHART_PAD_T  = 4;    // グラフ上余白 (px)
+        var CHART_PAD_B  = 14;   // グラフ下余白 (px、X軸ラベル用)
+
+        // ラップアラウンド検出の閾値 (axis値 -1.0〜1.0 の範囲で、飛び量がこれ以上なら無視)
+        var WRAP_THRESHOLD = 1.5;
+
+        // --- 状態変数 ---
+        var scrCount         = 0;
+        var scrLastDir       = null;
+        var scrLastEventTime = -Infinity;
+        var scrPrevDirTime   = null;
+        var resetTimer       = null;
+        var inactive         = true;
+        var intervalHistory  = [];
+        var scrLastValueOrg  = null;  // ラップアラウンド検出用
+
+        function handleScrDirectionChange(dir, nowMs) {
+            var prevDir        = scrLastDir;
+            var timeSinceLast  = nowMs - scrLastEventTime;
+            var timedOut       = timeSinceLast >= SCR_RESET_MS;
+            var sameDirTimedOut = timeSinceLast >= SAME_DIR_GATE;
+
+            scrLastEventTime = nowMs;
+
+            // 同方向 かつ 途切れていない → 回し続け中、無視
+            if (dir === prevDir && !sameDirTimedOut) {
+                clearTimeout(resetTimer);
+                resetTimer = setTimeout(onReset, SCR_RESET_MS);
+                return;
+            }
+
+            scrLastDir = dir;
+
+            // 最初の入力 / SCRリセット後 → カウント開始
+            if (prevDir === null || timedOut) {
+                scrPrevDirTime = nowMs;
+                scrCount = 1;
+                intervalHistory.push({ ms: 0, dir: dir });
+                inactive = false;
+                updateDisplay(scrCount, null, true);
+                drawChart();
+                clearTimeout(resetTimer);
+                resetTimer = setTimeout(onReset, SCR_RESET_MS);
+                return;
+            }
+
+            // 同方向途切れ再開 (100ms〜499ms) OR 方向転換 → どちらも1枚カウント
+            inactive = false;
+            scrCount++;
+
+            var intervalMs   = Math.floor(nowMs - scrPrevDirTime);
+            intervalHistory.push({ ms: intervalMs, dir: dir });
+            scrPrevDirTime = nowMs;
+
+            updateDisplay(scrCount, intervalMs, true);
+            drawChart();
+
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(onReset, SCR_RESET_MS);
+        }
+
+        function onReset() {
+            scrCount        = 0;
+            scrLastDir      = null;
+            scrPrevDirTime  = null;
+            scrLastValueOrg = null;
+            inactive        = true;
+            setInactive();
+        }
+
+        // --- 表示更新 ---
+        function updateDisplay(count, intervalMs, active) {
+            document.getElementById('count').textContent =
+                count >= 1 ? count : '—';
+            document.getElementById('interval').textContent =
+                intervalMs !== null ? intervalMs + 'ms' : '—';
+
+            document.getElementById('interval').className =
+                'info-value' + (active ? '' : ' inactive');
+        }
+
+        function setInactive() {
+            document.getElementById('interval').className = 'info-value inactive';
+        }
+
+        // --- 棒グラフ描画 (App.tsx の drawBarChart を移植) ---
+        // 音符区分の色: 4分=グレー(遅) → 32分=赤(速)
+        function noteColor(d) {
+            var t = (d - 4) / (32 - 4);
+            var r = Math.round(80 + t * 175);
+            var g = Math.round(80 - t * 60);
+            var b = Math.round(80 - t * 60);
+            return 'rgb(' + r + ',' + g + ',' + b + ')';
+        }
+
+        function drawChart() {
+            var canvas = document.getElementById('chart');
+            // CSSの表示幅に合わせてcanvasの解像度を更新
+            var displayW = canvas.offsetWidth;
+            if (displayW > 0) canvas.width = displayW;
+            var ctx    = canvas.getContext('2d');
+            var W      = canvas.width;
+            var H      = canvas.height;
+
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, W, H);
+
+            // 音符区分の基準ms計算
+            var ALL_DIVS     = [];
+            for (var d = 4; d <= 32; d++) ALL_DIVS.push(d);
+            var LABELED_DIVS = new Set([4, 8, 12, 16, 24, 32]);
+            var beatMs       = 60000 / BPM;
+            var noteRefMs    = ALL_DIVS.map(function(d) {
+                return { d: d, ms: beatMs / (d / 4) };
+            });
+
+            // スケール範囲: 1ms=上端, 499ms=下端 (線形)
+            var minMs  = 1;
+            var maxMs  = SCR_RESET_MS - 1;
+
+            var plotX = CHART_PAD_L;
+            var plotH = H - CHART_PAD_T - CHART_PAD_B;
+
+            // 線形スケール: 速い(ms小)=上, 遅い(ms大)=下
+            function msToY(ms) {
+                var clamped = Math.max(minMs, Math.min(maxMs, ms));
+                var ratio   = (clamped - minMs) / (maxMs - minMs);
+                return CHART_PAD_T + Math.round(ratio * plotH);
+            }
+
+
+            var data    = intervalHistory;
+            var count   = data.length;
+            if (count === 0) return;
+
+            var barW            = CHART_BAR_W;
+            var DIR_INDICATOR_H = Math.max(1, Math.floor(barW * 0.4));
+
+            // 表示できる本数を超えたら最新分だけ表示（右端スクロール）
+            var maxBars  = Math.floor((W - plotX) / barW);
+            var startIdx = Math.max(0, count - maxBars);
+
+            data.slice(startIdx).forEach(function(entry, i) {
+                var ms  = entry.ms;
+                var dir = entry.dir;
+                var x   = plotX + i * barW;
+                var yBottom = CHART_PAD_T + plotH;
+
+                var dirColor = dir > 0 ? '#4f8' : '#fa4';
+
+                if (ms === 0) {
+                    // 1枚目ダミー: 縦幅100%・方向色
+                    ctx.fillStyle   = dirColor;
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillRect(x, CHART_PAD_T, barW - 1, plotH);
+                    ctx.globalAlpha = 1.0;
+                } else {
+                    var yTop = Math.min(Math.max(CHART_PAD_T, msToY(ms)), yBottom - DIR_INDICATOR_H);
+                    var barH = yBottom - yTop;
+
+                    // グラデーションはグラフ全高基準で固定（上端=32分色の赤、下端=4分色のグレー）
+                    // バーの高さによらず同じY座標で同じ色になる
+                    var grad = ctx.createLinearGradient(0, CHART_PAD_T, 0, yBottom);
+                    grad.addColorStop(0, noteColor(32));
+                    grad.addColorStop(1, noteColor(4));
+
+                    // 上端: 方向インジケータ
+                    ctx.fillStyle = dirColor;
+                    ctx.fillRect(x, yTop, barW - 1, DIR_INDICATOR_H);
+                    // バー本体
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(x, yTop + DIR_INDICATOR_H, barW - 1, barH - DIR_INDICATOR_H);
+                }
+            });
+
+            // X軸ラベル (実際の枚数を10本おきに表示)
+            ctx.fillStyle = '#aaa';
+            ctx.font      = '9px monospace';
+            ctx.textAlign = 'center';
+            var tickStep = 10;
+            var tickList = [1];
+            for (var n = tickStep; n <= count; n += tickStep) tickList.push(n);
+            tickList.forEach(function(n) {
+                if (n <= startIdx) return; // 表示範囲外
+                var dispIdx = n - 1 - startIdx; // 表示上のインデックス
+                var x = plotX + dispIdx * barW + barW / 2;
+                if (x < plotX || x > W) return;
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth   = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, CHART_PAD_T + plotH);
+                ctx.lineTo(x, CHART_PAD_T + plotH + 3);
+                ctx.stroke();
+                ctx.fillText(String(n), x, H - 2);
+            });
+            ctx.textAlign = 'left';
+        }
+
+        // --- WebSocket メッセージ処理 ---
+        function onMessage(event) {
+            document.getElementById('warning').textContent = '';
+
+            var events;
+            try { events = JSON.parse(event.data); } catch(e) { return; }
+            if (!Array.isArray(events)) events = [events];
+
+            var nowMs = performance.now();
+            events.forEach(function(e) {
+                if (e.type !== 'axis') return;
+
+                // ラップアラウンド検出: value_org が前回値から急激に変化していたら無視
+                var valueOrg = e.value_org;
+                if (valueOrg !== undefined && scrLastValueOrg !== null) {
+                    var delta = Math.abs(valueOrg - scrLastValueOrg);
+                    if (delta >= WRAP_THRESHOLD) {
+                        scrLastValueOrg = valueOrg;
+                        return; // ラップアラウンドイベントを無視
+                    }
+                }
+                if (valueOrg !== undefined) scrLastValueOrg = valueOrg;
+
+                if (e.direction === -1) {
+                    // 方向不明イベント: タイマーだけ延長して途切れ判定をリセット
+                    scrLastEventTime = nowMs;
+                    clearTimeout(resetTimer);
+                    resetTimer = setTimeout(onReset, SCR_RESET_MS);
+                    return;
+                }
+                handleScrDirectionChange(e.direction, nowMs);
+            });
+        }
+
+        open();
+        drawChart();
+    </script>
+</body>
+</html>
