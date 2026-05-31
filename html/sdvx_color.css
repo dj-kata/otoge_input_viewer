@@ -1,0 +1,44 @@
+@font-face {
+    font-family: "DSEG14Classic";
+    src: url("DSEG14Classic-Bold.woff2") format("woff2");
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+body {
+    background-color: rgba(0, 0, 0, 0);
+    margin: 0px auto;
+    overflow: hidden;
+}
+
+:root {
+    --font-size-notes: 50px;
+    --border-common: #adf dashed 4px;
+    --outline-release-width: 8px;
+    --color-release-eachkey-low: #2a7;
+    --color-release-eachkey-mid: #aa7;
+    --color-release-eachkey-high: #a22;
+    --release-eachkey-int: 1;
+    --color-notes: #ff0;
+}
+
+table.info {
+    padding-top: 28px;
+}
+
+/* 統計情報のフォントを変更 */
+release {
+    font-family: "DSEG14Classic";
+    font-weight: bold;
+}
+
+notes {
+    font-family: "DSEG14Classic";
+    font-weight: bold;
+}
+
+density {
+    font-family: "DSEG14Classic";
+    font-weight: bold;
+}
