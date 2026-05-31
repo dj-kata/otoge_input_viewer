@@ -36,7 +36,7 @@ table.info {
 }
 
 :root {
-    --font-size-notes: 35px;
+    --font-size-notes: 40px;
     --scratch-right-lr2-mode: 0;
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
     --border-common: #fee solid 5px;
@@ -72,6 +72,10 @@ table.info td:nth-child(4) {
     padding-right: 8px;
 }
 
+table.info td:nth-child(2) {
+    padding-right: 0;
+}
+
 table.info td:nth-child(5) {
     text-align: right;
     width: 6ch;
@@ -79,7 +83,7 @@ table.info td:nth-child(5) {
 
 /* 統計情報のフォントを変更 */
 release {
-    width: 3ch;
+    width: 3.4ch;
     font-family: "DSEG14Classic";
     font-weight: bold;
 }
