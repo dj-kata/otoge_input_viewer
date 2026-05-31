@@ -18,6 +18,20 @@ def existing_include_files(*pairs: tuple[str, str]) -> list[tuple[str, str]]:
     return result
 
 
+def existing_include_tree(source: str, target: str, exclude_names: set[str] | None = None) -> list[tuple[str, str]]:
+    result = []
+    source_path = ROOT / source
+    if not source_path.exists():
+        return result
+
+    excluded = exclude_names or set()
+    for path in sorted(p for p in source_path.rglob("*") if p.is_file()):
+        if path.name in excluded:
+            continue
+        result.append((str(path), str(Path(target) / path.relative_to(source_path))))
+    return result
+
+
 def src_modules() -> list[str]:
     return sorted(
         f"src.{path.stem}"
@@ -58,8 +72,8 @@ try:
 except ImportError:
     print("Warning: PySide6 not found. Build may not work correctly.")
 
+include_files += existing_include_tree("html", "html", exclude_names={"history.oiv", "oiv_conf.pkl"})
 include_files += existing_include_files(
-    ("html", "html"),
     ("src/icon.ico", "src/icon.ico"),
     ("version.txt", "version.txt"),
 )
