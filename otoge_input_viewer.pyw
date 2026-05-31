@@ -1,6 +1,4 @@
 # 新処理方式のテスト用
-import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
 import pygame
 import websockets
 import asyncio
@@ -8,19 +6,32 @@ import json
 import threading
 from queue import Queue
 import os
+import sys
 import json
 import time
 from collections import defaultdict
 import logging, logging.handlers
 from settings import Settings, playmode, SettingsDialog
-from tooltip import ToolTip
 import subprocess
 from bs4 import BeautifulSoup
 import requests
 import traceback
 import urllib
 import webbrowser
+import base64
 import icon
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QIcon, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QGridLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -43,13 +54,25 @@ except Exception:
     SWVER = "v?.?.?"
 
 
-class JoystickWebSocketServer:
-    def __init__(self, root):
+def qt_icon():
+    pixmap = QPixmap()
+    pixmap.loadFromData(base64.b64decode(icon.icon_data))
+    return QIcon(pixmap)
+
+
+class JoystickWebSocketServer(QMainWindow):
+    label_update_requested = Signal(object, str, str)
+    button_enabled_requested = Signal(object, bool)
+    counter_update_requested = Signal()
+
+    def __init__(self):
+        super().__init__()
         self.time_start = time.perf_counter()
-        self.root = root
-        self.root.title("Otoge Input Viewer")
-        self.icon = tk.PhotoImage(data=icon.icon_data)
-        self.root.iconphoto(False, self.icon)
+        self.setWindowTitle("Otoge Input Viewer")
+        self.setWindowIcon(qt_icon())
+        self.label_update_requested.connect(self.set_label_text)
+        self.button_enabled_requested.connect(self.set_button_enabled)
+        self.counter_update_requested.connect(self.update_counter_display)
         self.scratch_queue = Queue() # スクラッチだけoff用処理も入れるため分ける
         self.calc_queue = Queue()  # 計算用のキュー、全イベントをここに流す
         self.event_queue = Queue() # HTMLへの出力をすべてここに通す
@@ -67,7 +90,7 @@ class JoystickWebSocketServer:
 
         self.joystick = [None, None]
 
-        self.root.geometry(f'+{self.settings.lx}+{self.settings.ly}')
+        self.move(self.settings.lx, self.settings.ly)
 
         self.setup_gui()
         self.init_pygame()
@@ -97,8 +120,14 @@ class JoystickWebSocketServer:
         ver = self.get_latest_version()
         if (ver != SWVER) and (ver is not None):
             logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
-            ans = tk.messagebox.askquestion('バージョン更新',f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。', icon='warning')
-            if ans == "yes":
+            ans = QMessageBox.question(
+                self,
+                'バージョン更新',
+                f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if ans == QMessageBox.Yes:
                 if os.path.exists('update.exe'):
                     logger.info('アップデート確認のため終了します')
                     res = subprocess.Popen('update.exe')
@@ -109,7 +138,7 @@ class JoystickWebSocketServer:
         else:
             logger.debug(f'お使いのバージョンは最新です({SWVER})')
             if always_disp_dialog:
-                messagebox.showinfo("Otoge Input Viewer", f'お使いのバージョンは最新です({SWVER})')
+                QMessageBox.information(self, "Otoge Input Viewer", f'お使いのバージョンは最新です({SWVER})')
 
     def get_uptime(self):
         """アプリの起起動時を文字列として返す
@@ -140,92 +169,69 @@ class JoystickWebSocketServer:
     def setup_gui(self):
         """GUIの設定を行う
         """
-        self.menubar = tk.Menu(self.root)
-        self.root.config(menu=self.menubar)
-        
-        settings_menu = tk.Menu(self.menubar, tearoff=0)
-        settings_menu.add_command(label="config", command=self.open_settings_dialog)
-        settings_menu.add_command(label="update", command=lambda:self.check_updates(True))
-        settings_menu.add_command(label="reset counter", command=self.reset_counter)
-        settings_menu.add_command(label="tweet", command=self.tweet)
-        self.menubar.add_cascade(label="file", menu=settings_menu)
+        settings_menu = self.menuBar().addMenu("file")
+        settings_menu.addAction(QAction("config", self, triggered=self.open_settings_dialog))
+        settings_menu.addAction(QAction("update", self, triggered=lambda:self.check_updates(True)))
+        settings_menu.addAction(QAction("reset counter", self, triggered=self.reset_counter))
+        settings_menu.addAction(QAction("tweet", self, triggered=self.tweet))
 
-        ctr_frame = ttk.Frame(self.root)
-        ctr_frame.pack(padx=5, pady=0)
+        central = QWidget(self)
+        layout = QVBoxLayout(central)
+        layout.setContentsMargins(6, 4, 6, 6)
+        layout.setSpacing(2)
+        self.setCentralWidget(central)
+
+        ctr_layout = QGridLayout()
+        ctr_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(ctr_layout)
 
         # ジョイパッド情報
         self.joystick_info = []
-        self.joystick_info.append(ttk.Label(
-            ctr_frame,
-            text="接続ジョイパッド: なし",
-            font=("Meiryo UI", 10)
-        ))
-        self.joystick_info[0].grid(row=0, column=0,sticky=tk.W)
+        self.joystick_info.append(QLabel("接続ジョイパッド: なし"))
+        ctr_layout.addWidget(self.joystick_info[0], 0, 0, alignment=Qt.AlignLeft)
 
         # コントローラ変更ボタン1
-        self.change_joystick_btn = ttk.Button(
-            ctr_frame,
-            text="change",
-            command=lambda:self.change_joystick(0),
-        )
-        self.change_joystick_btn.grid(row=0, column=1,sticky=tk.W)
+        self.change_joystick_btn = QPushButton("change")
+        self.change_joystick_btn.clicked.connect(lambda:self.change_joystick(0))
+        ctr_layout.addWidget(self.change_joystick_btn, 0, 1, alignment=Qt.AlignLeft)
 
         # ジョイパッド情報
-        self.joystick_info.append(ttk.Label(
-            ctr_frame,
-            text="接続ジョイパッド: なし",
-            font=("Meiryo UI", 10)
-        ))
-        self.joystick_info[1].grid(row=1, column=0,sticky=tk.W)
+        self.joystick_info.append(QLabel("接続ジョイパッド: なし"))
+        ctr_layout.addWidget(self.joystick_info[1], 1, 0, alignment=Qt.AlignLeft)
 
         # コントローラ変更ボタン2
-        self.change_joystick_btn2 = ttk.Button(
-            ctr_frame,
-            text="change",
-            command=lambda:self.change_joystick(1),
-        )
-        self.change_joystick_btn2.grid(row=1, column=1,sticky=tk.W)
+        self.change_joystick_btn2 = QPushButton("change")
+        self.change_joystick_btn2.clicked.connect(lambda:self.change_joystick(1))
+        ctr_layout.addWidget(self.change_joystick_btn2, 1, 1, alignment=Qt.AlignLeft)
         if self.settings.playmode != playmode.iidx_dp:
-            self.change_joystick_btn2.config(state='disable')
-
-        main_frame = ttk.Frame(self.root, padding=6)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+            self.change_joystick_btn2.setEnabled(False)
 
         # モード表示
-        self.mode_label = ttk.Label(main_frame, text=f'mode: {self.settings.playmode.name}', font=('Meiryo UI', 10))
-        self.mode_label.grid(row=0, sticky=tk.W)
+        self.mode_label = QLabel(f'mode: {self.settings.playmode.name}')
+        layout.addWidget(self.mode_label, alignment=Qt.AlignLeft)
 
         # ボタンカウンター
-        self.counter_label = ttk.Label(
-            main_frame,
-            text="notes: 0",
-            font=("Meiryo UI", 10)
-        )
-        self.counter_label.grid(row=1, sticky=tk.W)
+        self.counter_label = QLabel("notes: 0")
+        layout.addWidget(self.counter_label, alignment=Qt.AlignLeft)
 
         # サーバー状態表示
-        self.server_status = ttk.Label(
-            main_frame,
-            text=f"WebSocket port: {self.settings.port}",
-            font=("Meiryo UI", 10)
-        )
-        self.server_status.grid(row=2, sticky=tk.W)
+        self.server_status = QLabel(f"WebSocket port: {self.settings.port}")
+        layout.addWidget(self.server_status, alignment=Qt.AlignLeft)
 
         # uptime表示
-        self.uptime_label = ttk.Label(
-            main_frame,
-            text=f"uptime: 00:00:00",
-            font=("Meiryo UI", 10)
-        )
-        self.uptime_label.grid(row=3, sticky=tk.W)
+        self.uptime_label = QLabel(f"uptime: 00:00:00")
+        layout.addWidget(self.uptime_label, alignment=Qt.AlignLeft)
 
         # その他情報表示
-        self.other_info = ttk.Label(
-            main_frame,
-            text=f"",
-            font=("Meiryo UI", 10)
-        )
-        self.other_info.grid(row=4, sticky=tk.W)
+        self.other_info = QLabel("")
+        layout.addWidget(self.other_info, alignment=Qt.AlignLeft)
+
+    def set_label_text(self, label, text, color=""):
+        label.setText(text)
+        label.setStyleSheet(f"color: {color};" if color else "")
+
+    def set_button_enabled(self, button, enabled):
+        button.setEnabled(enabled)
 
     def start_monitor(self):
         # ジョイパッド監視スレッド
@@ -270,19 +276,19 @@ class JoystickWebSocketServer:
     def open_settings_dialog(self):
         """設定ウィンドウを開く
         """
-        dialog = SettingsDialog(self.root, self.settings)
-        self.root.wait_window(dialog)
+        dialog = SettingsDialog(self, self.settings)
+        dialog.exec()
         self.settings.load()
         self.settings.disp()
         self.update_server_status_display()
         if self.settings.playmode == playmode.iidx_dp:
-            self.change_joystick_btn2.config(state='enable')
+            self.change_joystick_btn2.setEnabled(True)
         else:
             if self.settings.connected_idx[1] is not None:
-                self.change_joystick_btn2.config(state='disable')
+                self.change_joystick_btn2.setEnabled(False)
                 self.joystick[1].quit()
                 self.joystick[1] = None
-                self.joystick_info[1].config(text=f"joypad disconnected", foreground='red')
+                self.set_label_text(self.joystick_info[1], f"joypad disconnected", 'red')
                 self.settings.connected_idx[1] = None
         self.toggle_server()
 
@@ -306,7 +312,7 @@ class JoystickWebSocketServer:
                         if self.joystick[1-controller_pos] is not None:
                             self.joystick[1-controller_pos].quit()
                         self.joystick[1-controller_pos] = None
-                        self.joystick_info[1-controller_pos].config(text=f"joypad disconnected", foreground='red')
+                        self.label_update_requested.emit(self.joystick_info[1-controller_pos], f"joypad disconnected", 'red')
                         self.settings.connected_idx[1-controller_pos] = None
                     self.reconnect_joystick(controller_pos, 0)
 
@@ -344,7 +350,7 @@ class JoystickWebSocketServer:
             self.joystick[controller_pos] = pygame.joystick.Joystick(idx)
             self.joystick[controller_pos].init()
             name = self.joystick[controller_pos].get_name()
-            self.joystick_info[controller_pos].config(text=f"connected: {name} (ID: {idx})", foreground='blue')
+            self.label_update_requested.emit(self.joystick_info[controller_pos], f"connected: {name} (ID: {idx})", 'blue')
             self.settings.connected_idx[controller_pos] = idx
         except pygame.error as e:
             logger.error(f"ジョイパッド接続エラー: {e}")
@@ -364,10 +370,10 @@ class JoystickWebSocketServer:
                     if self.settings.connected_idx[controller_pos] is not None:
                         self.reconnect_joystick(controller_pos, self.settings.connected_idx[controller_pos])
                         logger.debug(f'pos{controller_pos} connected (idx={self.settings.connected_idx[controller_pos]})')
-                self.change_joystick_btn.config(state=tk.NORMAL)
+                self.button_enabled_requested.emit(self.change_joystick_btn, True)
             except pygame.error as e:
                 logger.error(e)
-                self.joystick_info[controller_pos].config(text=str(e), foreground="red")
+                self.label_update_requested.emit(self.joystick_info[controller_pos], str(e), "red")
 
     def thread_density(self):
         """scratch処理用スレッド。リリース/密度の送信及び皿オフの扱いを入れる。scratch_queueのデータを受信してevent_queueに送る。
@@ -450,7 +456,7 @@ class JoystickWebSocketServer:
         """
         while True:
             uptime = self.get_uptime()
-            self.uptime_label.config(text=f"uptime: {uptime}")
+            self.label_update_requested.emit(self.uptime_label, f"uptime: {uptime}", "")
             time.sleep(1)
 
     def is_valid_event(self, event):
@@ -496,7 +502,7 @@ class JoystickWebSocketServer:
                     self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
                     for i in range(2):
-                        self.joystick_info[0].config(text=f"joypad disconnected", foreground='red')
+                        self.label_update_requested.emit(self.joystick_info[i], f"joypad disconnected", 'red')
             except Exception as e:
                 logger.debug(traceback.format_exc())
             pygame.time.wait(20)
@@ -534,13 +540,13 @@ class JoystickWebSocketServer:
             if out_direction != self.pre_scr_direction[event.axis]:
                 self.today_notes += 1
                 self.today_others += 1
-                self.root.after(0, self.update_counter_display)
+                self.counter_update_requested.emit()
                 self.event_queue.put({'type':'notes', 'value':self.today_notes})
             self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
             self.today_notes += 1
             self.today_keys += 1
-            self.root.after(0, self.update_counter_display)
+            self.counter_update_requested.emit()
             self.event_queue.put({'type':'notes', 'value':self.today_notes})
             event_data = {
                 'type': 'button',
@@ -565,9 +571,9 @@ class JoystickWebSocketServer:
                             self.reconnect_joystick(0, event.device_index)
         elif event.type == pygame.JOYDEVICEREMOVED:
             for i in range(2):
-                if self.joystick[i].get_instance_id() == event.instance_id:
+                if self.joystick[i] is not None and self.joystick[i].get_instance_id() == event.instance_id:
                     self.settings.connected_idx[i] = None
-                    self.joystick_info[i].config(text=f"joypad disconnected", foreground='red')
+                    self.label_update_requested.emit(self.joystick_info[i], f"joypad disconnected", 'red')
                     logger.debug(f'joypad {i} disconnected. connected_idx={self.settings.connected_idx}')
             if self.settings.playmode != playmode.iidx_dp:
                 if pygame.joystick.get_count() > 0:
@@ -582,13 +588,13 @@ class JoystickWebSocketServer:
         self.today_keys = 0
         self.today_others = 0
         self.time_start = time.perf_counter()
-        self.counter_label.config(text=f"notes: {self.today_notes}")
+        self.counter_label.setText(f"notes: {self.today_notes}")
 
     def update_counter_display(self):
         if self.settings.playmode == playmode.sdvx:
-            self.counter_label.config(text=f"notes: {self.today_notes} (key: {self.today_keys} + vol: {self.today_others})")
+            self.counter_label.setText(f"notes: {self.today_notes} (key: {self.today_keys} + vol: {self.today_others})")
         else: # 1p or 2p
-            self.counter_label.config(text=f"notes: {self.today_notes} (key: {self.today_keys} + scr: {self.today_others})")
+            self.counter_label.setText(f"notes: {self.today_notes} (key: {self.today_keys} + scr: {self.today_others})")
 
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
@@ -625,10 +631,8 @@ class JoystickWebSocketServer:
 
     def update_server_status_display(self):
         status_text = "停止中" if not self.running else "稼働中"
-        self.server_status.config(
-            text=f"WebSocket: {status_text} (ポート: {self.settings.port})"
-        )
-        self.mode_label.config(text=f"mode: {self.settings.playmode.name}")
+        self.server_status.setText(f"WebSocket: {status_text} (ポート: {self.settings.port})")
+        self.mode_label.setText(f"mode: {self.settings.playmode.name}")
 
     def load_settings(self):
         if os.path.exists(self.CONFIG_FILE):
@@ -678,18 +682,22 @@ class JoystickWebSocketServer:
         """
         logger.debug('exit')
         self.running = False
-        self.settings.lx = self.root.winfo_x()
-        self.settings.ly = self.root.winfo_y()
+        self.settings.lx = self.x()
+        self.settings.ly = self.y()
         self.settings.save()
         pygame.quit()
-        self.root.destroy()
+        QApplication.quit()
+
+    def closeEvent(self, event):
+        self.on_close()
+        event.accept()
 
 if __name__ == "__main__":
     try:
-        root = tk.Tk()
-        app = JoystickWebSocketServer(root)
-        root.protocol("WM_DELETE_WINDOW", app.on_close)
-        root.minsize(300,200)
-        root.mainloop()
+        qt_app = QApplication(sys.argv)
+        app = JoystickWebSocketServer()
+        app.setMinimumSize(300, 200)
+        app.show()
+        sys.exit(qt_app.exec())
     except Exception as e:
         logger.error(traceback.format_exc())

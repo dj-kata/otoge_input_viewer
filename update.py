@@ -11,9 +11,20 @@ import threading
 import time
 from pathlib import Path
 from packaging import version
-import tkinter as tk
-from tkinter import ttk, messagebox
 from urllib.parse import urlparse
+import base64
+
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
+)
 
 import logging, logging.handlers
 import traceback
@@ -34,7 +45,17 @@ hdl_formatter = logging.Formatter('%(asctime)s %(filename)s:%(lineno)5d %(funcNa
 hdl.setFormatter(hdl_formatter)
 logger.addHandler(hdl)
 
-class GitHubUpdater:
+def qt_icon():
+    pixmap = QPixmap()
+    pixmap.loadFromData(base64.b64decode(icon.icon_data))
+    return QIcon(pixmap)
+
+
+class GitHubUpdater(QObject):
+    status_update_requested = Signal(str, object)
+    error_requested = Signal(str)
+    cancel_requested = Signal()
+
     def __init__(self, github_author='', github_repo='', current_version='', main_exe_name=None, updator_exe_name=None):
         """
         GitHub自動アップデータの初期化
@@ -45,6 +66,7 @@ class GitHubUpdater:
             main_exe_name (str): メインプログラムのexe名（例: "main.exe"）
             updator_exe_name (str): アップデート用プログラムのexe名 (例: "update.exe"）
         """
+        super().__init__()
         self.github_author = github_author
         self.github_repo = github_repo
         self.current_version = current_version
@@ -60,6 +82,11 @@ class GitHubUpdater:
         self.progress_var = None
         self.status_var = None
         self.progress_bar = None
+        self.app = QApplication.instance()
+        self.status_label = None
+        self.status_update_requested.connect(self._apply_status)
+        self.error_requested.connect(lambda message: QMessageBox.warning(self.root, "エラー", message))
+        self.cancel_requested.connect(self.cancel_update)
 
     def ico_path(self, relative_path):
         try:
@@ -104,54 +131,44 @@ class GitHubUpdater:
     
     def create_gui(self):
         """アップデート用GUIの作成"""
-        self.root = tk.Tk()
-        self.icon = tk.PhotoImage(data=icon.icon_data)
-        self.root.iconphoto(False, self.icon)
-        self.root.title("プログラム更新中...")
-        self.root.geometry("500x200")
-        self.root.resizable(False, False)
-        
-        # 中央に配置
-        self.root.geometry("+%d+%d" % (
-            (self.root.winfo_screenwidth() / 2 - 250),
-            (self.root.winfo_screenheight() / 2 - 100)
-        ))
-        
-        # メインフレーム
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # タイトル
-        title_label = ttk.Label(main_frame, text="プログラムを最新版に更新しています...", 
-                               font=("Arial", 12, "bold"))
-        title_label.pack(pady=(0, 20))
-        
-        # ステータステキスト
-        self.status_var = tk.StringVar(value="更新確認中...")
-        status_label = ttk.Label(main_frame, textvariable=self.status_var)
-        status_label.pack(pady=(0, 10))
-        
-        # プログレスバー
-        self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(main_frame, variable=self.progress_var, 
-                                          maximum=100, length=400)
-        self.progress_bar.pack(pady=(0, 20))
-        
-        # キャンセルボタン
-        cancel_button = ttk.Button(main_frame, text="キャンセル", 
-                                 command=self.cancel_update)
-        cancel_button.pack()
-        
-        self.root.protocol("WM_DELETE_WINDOW", self.cancel_update)
+        if self.app is None:
+            self.app = QApplication(sys.argv)
+        self.root = QDialog()
+        self.root.setWindowIcon(qt_icon())
+        self.root.setWindowTitle("プログラム更新中...")
+        self.root.setFixedSize(500, 200)
+
+        layout = QVBoxLayout(self.root)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title_label = QLabel("プログラムを最新版に更新しています...")
+        title_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        layout.addWidget(title_label)
+
+        self.status_label = QLabel("更新確認中...")
+        layout.addWidget(self.status_label)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        layout.addWidget(self.progress_bar)
+
+        cancel_button = QPushButton("キャンセル")
+        cancel_button.clicked.connect(self.cancel_update)
+        layout.addWidget(cancel_button)
+
+        self.root.show()
         
     def update_status(self, message, progress=None):
         """ステータス更新"""
-        if self.status_var:
-            self.status_var.set(message)
-        if progress is not None and self.progress_var:
-            self.progress_var.set(progress)
-        if self.root:
-            self.root.update()
+        self.status_update_requested.emit(message, progress)
+
+    def _apply_status(self, message, progress=None):
+        if self.status_label:
+            self.status_label.setText(message)
+        if progress is not None and self.progress_bar:
+            self.progress_bar.setValue(int(progress))
+        if self.app:
+            self.app.processEvents()
     
     def download_file(self, url, filepath):
         """
@@ -255,7 +272,9 @@ del "%~f0"
         """アップデートキャンセル"""
         self.cleanup()
         if self.root:
-            self.root.destroy()
+            self.root.close()
+        if self.app:
+            self.app.quit()
         sys.exit(0)
     
     def run_update(self):
@@ -265,9 +284,9 @@ del "%~f0"
             is_update_available, latest_version, download_url = self.check_for_updates()
             
             if not is_update_available:
-                messagebox.showinfo("更新確認", "お使いのバージョンは最新です。")
+                QMessageBox.information(self.root, "更新確認", "お使いのバージョンは最新です。")
                 if self.root:
-                    self.root.destroy()
+                    self.root.close()
                 return False
             
             # GUIを表示
@@ -296,7 +315,7 @@ del "%~f0"
                     subprocess.Popen(['/bin/bash', str(script_path)])
                 
                 if self.root:
-                    self.root.destroy()
+                    self.root.close()
                 sys.exit(0)
             
             return True
@@ -305,7 +324,7 @@ del "%~f0"
             error_msg = f"更新エラー: {e}"
             print(error_msg)
             if self.root:
-                messagebox.showerror("エラー", error_msg)
+                QMessageBox.warning(self.root, "エラー", error_msg)
             self.cleanup()
             return False
     
@@ -334,14 +353,17 @@ del "%~f0"
             
             if is_update_available:
                 # 確認ダイアログ
-                result = messagebox.askyesno(
+                result = QMessageBox.question(
+                    self.root,
                     "アップデート確認",
                     f"新しいバージョン（{latest_version}）が利用可能です。\n"
                     f"現在のバージョン: {self.current_version}\n\n"
-                    "今すぐ更新しますか？"
+                    "今すぐ更新しますか？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
                 )
                 
-                if result:
+                if result == QMessageBox.Yes:
                     self.cleanup()
                     
                     # 別スレッドで更新実行
@@ -369,16 +391,18 @@ del "%~f0"
                         except Exception as e:
                             logger.error(traceback.format_exc())
                             error_msg = f"更新エラー: {e}"
-                            self.root.after(0, lambda: messagebox.showerror("エラー", error_msg))
-                            self.root.after(0, self.cancel_update)
+                            self.error_requested.emit(error_msg)
+                            self.cancel_requested.emit()
                     
                     thread = threading.Thread(target=update_thread, daemon=True)
                     thread.start()
                     
-                    self.root.mainloop()
+                    self.app.exec()
                     return True
             else:
                 logger.info('no update')
+                if self.root:
+                    self.root.close()
             return False
             
         except Exception as e:
@@ -398,7 +422,7 @@ del "%~f0"
                 subprocess.Popen(['/bin/bash', str(script_path)])
             
             if self.root:
-                self.root.destroy()
+                self.root.close()
             sys.exit(0)
 
 

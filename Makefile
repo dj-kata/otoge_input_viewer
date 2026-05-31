@@ -1,21 +1,24 @@
-wuv=/mnt/c/Users/katao/.local/bin/uv.exe
+wuv ?= /mnt/c/Users/katao/.local/bin/uv.exe
 outdir=otoge_input_viewer
-target=$(outdir)/otoge_input_viewer.exe
+target=$(outdir)/.built
 target_zip=otoge_input_viewer.zip
-srcs=$(subst update.py,,$(wildcard *.py)) $(wildcard *.pyw)
+srcs=$(wildcard *.py) $(wildcard *.pyw)
 html_files=$(wildcard html/*.*)
+ZIP ?= zip -r
 
 all: $(target_zip)
-$(target_zip): $(target) $(outdir)/update.exe $(html_files) version.txt
+$(target_zip): $(target) $(html_files) version.txt
+	@rm -rf $(target_zip)
 	@cp version.txt $(outdir)
 	@cp -a html $(outdir)
 	@rm -rf $(outdir)/log
-	@zip $(target_zip) $(outdir)/* $(outdir)/*/*
+	@$(ZIP) $(target_zip) $(outdir)
 
-$(target): $(srcs)
-	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile otoge_input_viewer.pyw
-$(outdir)/update.exe: update.py
-	@$(wuv) run pyarmor -d gen --output=$(outdir) --pack onefile $<
+$(target): $(srcs) $(html_files) version.txt setup.py
+	@rm -rf $(outdir)
+	@$(wuv) run setup.py build
+	@rm -f $(outdir)/lib/PySide6/Qt6WebEngine*.dll 2>/dev/null || true
+	@touch $(target)
 
 dist: 
 	@cp -a html to_bin/
@@ -23,10 +26,8 @@ dist:
 	@cp -a $(outdir)/*.exe to_bin/
 
 clean:
-	@rm -rf $(target)
-	@rm -rf $(outdir)/update.exe
+	@rm -rf $(outdir)
 	@rm -rf __pycache__
-	@rm -rf pyarmor*log
 
 test:
-	@$(wuv) run otoge_input_viewer.pyw
+	@$(wuv) run python otoge_input_viewer.pyw

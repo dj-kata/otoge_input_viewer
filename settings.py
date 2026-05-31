@@ -1,10 +1,22 @@
 # 設定用クラス及び設定ダイアログをここに書く
 import pickle, os
 from enum import Enum
-import tkinter as tk
-from tooltip import ToolTip
-from tkinter import ttk, simpledialog, messagebox
 import ipaddress
+
+from PySide6.QtWidgets import (
+    QButtonGroup,
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QRadioButton,
+    QVBoxLayout,
+)
+
 savefile = 'oiv_conf.pkl'
 
 class playmode(Enum):
@@ -75,82 +87,71 @@ class Settings:
             f.write('    --port:'+str(self.port)+';\n')
             f.write('}')
 
-class SettingsDialog(tk.Toplevel):
+class SettingsDialog(QDialog):
     def __init__(self, parent, settings:Settings):
         super().__init__(parent)
-        self.title("設定")
+        self.setWindowTitle("設定")
         self.settings = settings
         self.result = None
-        self.grab_set() # メインウィンドウの操作禁止
-        
+        self.setModal(True)
+
         self.create_widgets()
         self.load_current_settings()
 
-        lx = parent.winfo_x()
-        ly = parent.winfo_y()
-        super().geometry(f'+{lx}+{ly}')
-        super().protocol('WM_DELETE_WINDOW', self.save)
-
     def create_widgets(self):
-        frame_mode = ttk.Frame(self)
-        frame_mode.pack(padx=0, pady=0)
+        layout = QVBoxLayout(self)
 
-        self.playmode_radios = []
-        self.playmode_var = tk.IntVar()
-        ttk.Label(frame_mode, text="playmode:").pack(side=tk.LEFT, padx=5, pady=0)
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("playmode:"))
+        self.playmode_group = QButtonGroup(self)
         for i in range(len(playmode.get_names())):
-            self.playmode_radios.append(tk.Radiobutton(frame_mode, value=i, variable=self.playmode_var, text=playmode.get_names()[i]))
-            self.playmode_radios[i].pack(side=tk.LEFT, padx=5, pady=5)
+            radio = QRadioButton(playmode.get_names()[i])
+            self.playmode_group.addButton(radio, i)
+            mode_layout.addWidget(radio)
+        mode_layout.addStretch()
+        layout.addLayout(mode_layout)
 
-        frame = ttk.Frame(self, padding=0)
-        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5)
+        form = QFormLayout()
+        layout.addLayout(form)
 
-        ttk.Label(frame, text="LongNotes判定しきい値(ms) (default=225):").grid(row=0, column=0, sticky=tk.W)
-        self.ln_threshold = ttk.Entry(frame)
-        self.ln_threshold.grid(row=0, column=1, sticky=tk.W)
+        self.ln_threshold = QLineEdit()
+        form.addRow("LongNotes判定しきい値(ms) (default=225):", self.ln_threshold)
 
-        ttk.Label(frame, text="リリース速度計算用ノーツ数 (default=200):").grid(row=2, column=0, sticky=tk.W)
-        self.size_release_hist_entry = ttk.Entry(frame)
-        self.size_release_hist_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.size_release_hist_entry = QLineEdit()
+        form.addRow("リリース速度計算用ノーツ数 (default=200):", self.size_release_hist_entry)
 
-        ttk.Label(frame, text="単鍵リリース速度計算用ノーツ数 (default=30)").grid(row=3, column=0, sticky=tk.W)
-        self.size_release_key_hist_entry = ttk.Entry(frame)
-        self.size_release_key_hist_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.size_release_key_hist_entry = QLineEdit()
+        form.addRow("単鍵リリース速度計算用ノーツ数 (default=30)", self.size_release_key_hist_entry)
 
-        ttk.Label(frame, text="譜面密度計算周期(s) (default=0.5)").grid(row=4, column=0, sticky=tk.W)
-        self.density_interval_entry = ttk.Entry(frame)
-        self.density_interval_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.density_interval_entry = QLineEdit()
+        form.addRow("譜面密度計算周期(s) (default=0.5)", self.density_interval_entry)
 
-        ttk.Label(frame, text="WebSocketポート: (default=8765)").grid(row=6, column=0, sticky=tk.W)
-        self.port_entry = ttk.Entry(frame)
-        self.port_entry.grid(row=6, column=1, padx=5, pady=5)
-        ToolTip(self.port_entry, '変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
+        self.port_entry = QLineEdit()
+        self.port_entry.setToolTip('変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
+        form.addRow("WebSocketポート: (default=8765)", self.port_entry)
 
-        self.debug_mode_var = tk.BooleanVar()
-        self.debug_mode_check = ttk.Checkbutton(
-            frame,
-            text='debug_mode (default=off)',
-            variable=self.debug_mode_var
-        )
-        self.debug_mode_check.grid(row=7, column=0, columnspan=2, pady=5, sticky=tk.W)
+        self.debug_mode_check = QCheckBox('debug_mode (default=off)')
+        layout.addWidget(self.debug_mode_check)
 
-        self.auto_update_var = tk.BooleanVar()
-        self.auto_update_check = ttk.Checkbutton(
-            frame,
-            text='起動時にアプリを自動更新する (default=on)',
-            variable=self.auto_update_var
-        )
-        self.auto_update_check.grid(row=8, column=0, columnspan=2, pady=5, sticky=tk.W)
+        self.auto_update_check = QCheckBox('起動時にアプリを自動更新する (default=on)')
+        layout.addWidget(self.auto_update_check)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.save)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
 
     def load_current_settings(self):
-        self.ln_threshold.insert(0, str(self.settings.ln_threshold))
-        self.size_release_hist_entry.insert(0, str(self.settings.size_release_hist))
-        self.size_release_key_hist_entry.insert(0, str(self.settings.size_release_key_hist))
-        self.density_interval_entry.insert(0, str(self.settings.density_interval))
-        self.port_entry.insert(0, str(self.settings.port))
-        self.debug_mode_var.set(self.settings.debug_mode)
-        self.auto_update_var.set(self.settings.auto_update)
-        self.playmode_var.set(self.settings.playmode.value)
+        self.ln_threshold.setText(str(self.settings.ln_threshold))
+        self.size_release_hist_entry.setText(str(self.settings.size_release_hist))
+        self.size_release_key_hist_entry.setText(str(self.settings.size_release_key_hist))
+        self.density_interval_entry.setText(str(self.settings.density_interval))
+        self.port_entry.setText(str(self.settings.port))
+        self.debug_mode_check.setChecked(self.settings.debug_mode)
+        self.auto_update_check.setChecked(self.settings.auto_update)
+        button = self.playmode_group.button(self.settings.playmode.value)
+        if button is not None:
+            button.setChecked(True)
 
     def is_valid_ip(self, address):
         try:
@@ -163,11 +164,11 @@ class SettingsDialog(tk.Toplevel):
         """設定値をファイルに保存
         """
         try:
-            port = int(self.port_entry.get())
-            ln_threshold = int(self.ln_threshold.get())
-            size_release_hist = int(self.size_release_hist_entry.get())
-            size_release_key_hist = int(self.size_release_key_hist_entry.get())
-            density_interval = float(self.density_interval_entry.get())
+            port = int(self.port_entry.text())
+            ln_threshold = int(self.ln_threshold.text())
+            size_release_hist = int(self.size_release_hist_entry.text())
+            size_release_key_hist = int(self.size_release_key_hist_entry.text())
+            density_interval = float(self.density_interval_entry.text())
             if not (1 <= port <= 65535):
                 raise ValueError("ポート番号が無効です")
             if not (ln_threshold > 0):
@@ -183,14 +184,14 @@ class SettingsDialog(tk.Toplevel):
             self.settings.size_release_hist = size_release_hist
             self.settings.size_release_key_hist = size_release_key_hist
             self.settings.density_interval = density_interval
-            self.settings.debug_mode = self.debug_mode_var.get()
-            self.settings.auto_update = self.auto_update_var.get()
-            self.settings.playmode = playmode(self.playmode_var.get())
+            self.settings.debug_mode = self.debug_mode_check.isChecked()
+            self.settings.auto_update = self.auto_update_check.isChecked()
+            self.settings.playmode = playmode(self.playmode_group.checkedId())
             self.settings.save()
             self.settings.write_websocket_settings()
-            self.destroy()
+            self.accept()
         except ValueError as e:
-            messagebox.showerror("入力エラー", str(e))
+            QMessageBox.warning(self, "入力エラー", str(e))
 
 if __name__ == '__main__':
     a = Settings()
