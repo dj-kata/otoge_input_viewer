@@ -174,6 +174,11 @@ class CaptureLineEdit(QLineEdit):
         self.dialog.start_capture(self.target_id)
         super().mousePressEvent(event)
 
+    def keyPressEvent(self, event):
+        if self.dialog.handle_capture_key(event.key()):
+            return
+        super().keyPressEvent(event)
+
 
 class KeyConfigDialog(QDialog):
     def __init__(self, parent, settings):
@@ -207,7 +212,7 @@ class KeyConfigDialog(QDialog):
         top.addStretch()
         layout.addLayout(top)
 
-        self.status_label = QLabel("入力欄をクリックして、割り当てたいコントローラ入力を押してください。Escでキャンセル。")
+        self.status_label = QLabel("入力欄をクリックして、割り当てたいコントローラ入力を押してください。Escでキャンセル、Delで削除。")
         layout.addWidget(self.status_label)
 
         self.scroll_area = QScrollArea(self)
@@ -284,7 +289,7 @@ class KeyConfigDialog(QDialog):
         self.capture_target_id = target_id
         for item_id, entry in self.inputs.items():
             entry.setStyleSheet("background: #fff3bf;" if item_id == target_id else "")
-        self.status_label.setText("入力待ちです。コントローラを操作してください。Escでキャンセル。")
+        self.status_label.setText("入力待ちです。コントローラを操作してください。Escでキャンセル、Delで削除。")
 
     def receive_event(self, spec):
         if self.capture_target_id is None:
@@ -316,6 +321,17 @@ class KeyConfigDialog(QDialog):
             entry.setStyleSheet("")
         self.status_label.setText(message)
 
+    def delete_capture_target(self):
+        if self.capture_target_id is None:
+            return
+        mode_name = self.current_mode_name()
+        target_id = self.capture_target_id
+        self.key_config[mode_name].pop(target_id, None)
+        self.inputs[target_id].clear()
+        if target_id in self.invert_checks:
+            self.invert_checks[target_id].setChecked(False)
+        self.cancel_capture("割当を削除しました。")
+
     def clear_current_mode(self):
         mode_name = self.current_mode_name()
         self.key_config[mode_name] = {}
@@ -323,9 +339,18 @@ class KeyConfigDialog(QDialog):
             entry.clear()
         self.cancel_capture("表示中モードの割当をクリアしました。")
 
+    def handle_capture_key(self, key):
+        if self.capture_target_id is not None:
+            if key == Qt.Key_Escape:
+                self.cancel_capture()
+                return True
+            if key == Qt.Key_Delete:
+                self.delete_capture_target()
+                return True
+        return False
+
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape and self.capture_target_id is not None:
-            self.cancel_capture()
+        if self.handle_capture_key(event.key()):
             return
         super().keyPressEvent(event)
 

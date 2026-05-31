@@ -10,6 +10,7 @@ import sys
 import json
 import time
 from collections import defaultdict
+from datetime import datetime
 import logging, logging.handlers
 from src.settings import Settings, playmode, SettingsDialog
 from src.key_config import (
@@ -21,6 +22,7 @@ from src.key_config import (
     target_to_event_data,
 )
 from src.update import GitHubUpdater
+from src.count_history import CountHistory
 import traceback
 import urllib
 import webbrowser
@@ -82,6 +84,8 @@ class JoystickWebSocketServer(QMainWindow):
         self.today_notes = 0  # 合計
         self.today_keys = 0  # 鍵盤部分
         self.today_others = 0  # スクラッチとかツマミとかピックとか
+        self.mode_display_counts = {}
+        self.mode_session_counts = {}
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
@@ -95,6 +99,8 @@ class JoystickWebSocketServer(QMainWindow):
         self.held_axis_button_lock = threading.Lock()
         self.list_density = []
         self.settings = Settings()
+        self.count_history = CountHistory()
+        self.load_count_log_state()
         logger.debug(f"settings = {self.settings.__dict__}")
 
         self.joystick = [None, None]
@@ -103,6 +109,7 @@ class JoystickWebSocketServer(QMainWindow):
         self.move(self.settings.lx, self.settings.ly)
 
         self.setup_gui()
+        self.update_counter_display()
         self.init_pygame()
         self.start_monitor()
         self.start_threads()
@@ -134,6 +141,79 @@ class JoystickWebSocketServer(QMainWindow):
         uptime_str = f"{uptime_h:02d}:{uptime_m:02d}:{uptime_s:02d}"
         return uptime_str
 
+    def load_count_log_state(self):
+        mode_name = self.settings.playmode.name
+        if not self.settings.count_log_enabled:
+            self.mode_display_counts[mode_name] = {"key": 0, "other": 0}
+            self.mode_session_counts[mode_name] = {"key": 0, "other": 0}
+            return
+        if self.settings.count_log_auto_reset:
+            counts = {"key": 0, "other": 0}
+        else:
+            counts = self.count_history.get_carryover(mode_name)
+        self.mode_display_counts[mode_name] = dict(counts)
+        self.mode_session_counts.setdefault(mode_name, {"key": 0, "other": 0})
+        self.apply_mode_counts(mode_name)
+
+    def apply_mode_counts(self, mode_name):
+        counts = self.mode_display_counts.setdefault(mode_name, {"key": 0, "other": 0})
+        self.today_keys = counts["key"]
+        self.today_others = counts["other"]
+        self.today_notes = self.today_keys + self.today_others
+
+    def store_current_mode_counts(self):
+        self.mode_display_counts[self.settings.playmode.name] = {
+            "key": self.today_keys,
+            "other": self.today_others,
+        }
+
+    def switch_counter_mode(self, mode_name):
+        if mode_name not in self.mode_display_counts:
+            if self.settings.count_log_enabled and not self.settings.count_log_auto_reset:
+                self.mode_display_counts[mode_name] = self.count_history.get_carryover(
+                    mode_name
+                )
+            else:
+                self.mode_display_counts[mode_name] = {"key": 0, "other": 0}
+        self.mode_session_counts.setdefault(mode_name, {"key": 0, "other": 0})
+        self.apply_mode_counts(mode_name)
+        self.update_counter_display()
+
+    def increment_counter(self, count_key=False, count_other=False):
+        if not count_key and not count_other:
+            return
+        mode_name = self.settings.playmode.name
+        session_counts = self.mode_session_counts.setdefault(
+            mode_name, {"key": 0, "other": 0}
+        )
+        if count_key:
+            self.today_keys += 1
+            if self.settings.count_log_enabled:
+                session_counts["key"] += 1
+        if count_other:
+            self.today_others += 1
+            if self.settings.count_log_enabled:
+                session_counts["other"] += 1
+        self.today_notes += 1
+        self.store_current_mode_counts()
+        self.counter_update_requested.emit()
+        self.event_queue.put({"type": "notes", "value": self.today_notes})
+
+    def current_monthly_total(self):
+        if not self.settings.count_log_enabled:
+            return None
+        current_month = datetime.now().strftime("%Y/%m")
+        monthly_total = self.count_history.monthly_total(
+            self.settings.playmode.name, current_month
+        )
+        session_counts = self.mode_session_counts.get(
+            self.settings.playmode.name, {"key": 0, "other": 0}
+        )
+        monthly_total += session_counts["key"] + session_counts["other"]
+        if monthly_total <= 0:
+            return None
+        return current_month, monthly_total
+
     def tweet(self):
         """本日の打鍵数をTwitterに投稿する"""
         msg = f"notes: {self.today_notes}"
@@ -141,6 +221,10 @@ class JoystickWebSocketServer(QMainWindow):
             msg += f" (key: {self.today_keys}, vol: {self.today_others})\n"
         elif self.settings.playmode in (playmode.iidx_sp, playmode.iidx_dp):
             msg += f" (key: {self.today_keys}, scratch: {self.today_others})\n"
+        monthly = self.current_monthly_total()
+        if monthly is not None:
+            month, total = monthly
+            msg += f"({month}: {total:,})\n"
         msg += f"mode: {self.settings.playmode.name}\n"
         msg += f"uptime: {self.get_uptime()}\n#otoge_input_viewer\n"
         encoded_msg = urllib.parse.quote(f"{msg}")
@@ -255,10 +339,21 @@ class JoystickWebSocketServer(QMainWindow):
 
     def open_settings_dialog(self):
         """設定ウィンドウを開く"""
+        previous_mode_name = self.settings.playmode.name
+        previous_log_enabled = self.settings.count_log_enabled
+        self.store_current_mode_counts()
         dialog = SettingsDialog(self, self.settings)
         dialog.exec()
         self.settings.load()
         self.settings.disp()
+        if not previous_log_enabled and self.settings.count_log_enabled:
+            self.mode_session_counts = {}
+            if self.settings.count_log_auto_reset:
+                self.mode_display_counts = {}
+        if previous_mode_name != self.settings.playmode.name:
+            self.switch_counter_mode(self.settings.playmode.name)
+        elif self.settings.count_log_enabled != previous_log_enabled:
+            self.switch_counter_mode(self.settings.playmode.name)
         self.update_server_status_display()
         if self.settings.playmode == playmode.iidx_dp:
             self.change_joystick_btn2.setEnabled(True)
@@ -723,13 +818,7 @@ class JoystickWebSocketServer(QMainWindow):
         self, event_data, count_notes=False, count_key=False, count_other=False
     ):
         if count_notes:
-            self.today_notes += 1
-            if count_key:
-                self.today_keys += 1
-            if count_other:
-                self.today_others += 1
-            self.counter_update_requested.emit()
-            self.event_queue.put({"type": "notes", "value": self.today_notes})
+            self.increment_counter(count_key=count_key, count_other=count_other)
         self.calc_queue.put(event_data)
         self.event_queue.put(event_data)
 
@@ -888,16 +977,10 @@ class JoystickWebSocketServer(QMainWindow):
                 "value_org": event.value,
             }
             if out_direction != self.pre_scr_direction[event.axis]:
-                self.today_notes += 1
-                self.today_others += 1
-                self.counter_update_requested.emit()
-                self.event_queue.put({"type": "notes", "value": self.today_notes})
+                self.increment_counter(count_other=True)
             self.pre_scr_direction[event.axis] = out_direction
         elif event.type == pygame.JOYBUTTONDOWN:
-            self.today_notes += 1
-            self.today_keys += 1
-            self.counter_update_requested.emit()
-            self.event_queue.put({"type": "notes", "value": self.today_notes})
+            self.increment_counter(count_key=True)
             event_data = {
                 "type": "button",
                 "button": event.button,
@@ -944,6 +1027,7 @@ class JoystickWebSocketServer(QMainWindow):
         self.today_notes = 0
         self.today_keys = 0
         self.today_others = 0
+        self.store_current_mode_counts()
         self.time_start = time.perf_counter()
         self.counter_label.setText(f"notes: {self.today_notes}")
 
@@ -1034,10 +1118,37 @@ class JoystickWebSocketServer(QMainWindow):
         self.joystick_thread = threading.Thread(target=self.monitor_thread, daemon=True)
         self.joystick_thread.start()
 
+    def save_count_history(self):
+        if not self.settings.count_log_enabled:
+            return
+        self.store_current_mode_counts()
+        ended_at = datetime.now()
+        for mode_name, counts in self.mode_session_counts.items():
+            self.count_history.add_session(
+                mode_name,
+                counts.get("key", 0),
+                counts.get("other", 0),
+                ended_at=ended_at,
+            )
+        if self.settings.count_log_auto_reset:
+            for mode_name in playmode.get_names():
+                self.count_history.set_carryover(mode_name, 0, 0)
+        else:
+            for mode_name, counts in self.mode_display_counts.items():
+                self.count_history.set_carryover(
+                    mode_name,
+                    counts.get("key", 0),
+                    counts.get("other", 0),
+                )
+        self.count_history.save()
+
     def on_close(self):
         """メインウィンドウ終了時に実行される関数"""
         logger.debug("exit")
         self.running = False
+        if self.settings.auto_tweet_on_exit:
+            self.tweet()
+        self.save_count_history()
         self.settings.lx = self.x()
         self.settings.ly = self.y()
         self.settings.save()

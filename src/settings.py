@@ -40,6 +40,9 @@ class Settings:
         self.connected_idx = [None,None]
         self.debug_mode = False # コントローラ入力の全dumpなど
         self.auto_update = True # 自動アップデート
+        self.auto_tweet_on_exit = False # 終了時に打鍵数を自動ツイート
+        self.count_log_enabled = False # 打鍵数ログ取得
+        self.count_log_auto_reset = True # 打鍵数ログ有効時、起動時にカウンターを0に戻す
         self.playmode = playmode.iidx_sp
         self.key_config = {}
         #self.log_offset = '0'
@@ -48,6 +51,12 @@ class Settings:
         self.load()
         if not hasattr(self, 'key_config') or type(self.key_config) is not dict:
             self.key_config = {}
+        if not hasattr(self, 'auto_tweet_on_exit'):
+            self.auto_tweet_on_exit = False
+        if not hasattr(self, 'count_log_enabled'):
+            self.count_log_enabled = False
+        if not hasattr(self, 'count_log_auto_reset'):
+            self.count_log_auto_reset = True
         self.save()
         self.write_websocket_settings()
 
@@ -62,6 +71,9 @@ class Settings:
         print(f"playmode={self.playmode.name}")
         print(f"debug_mode={self.debug_mode}")
         print(f"auto_update={self.auto_update}")
+        print(f"auto_tweet_on_exit={self.auto_tweet_on_exit}")
+        print(f"count_log_enabled={self.count_log_enabled}")
+        print(f"count_log_auto_reset={self.count_log_auto_reset}")
         print(f"key_config={self.key_config}")
 
     def load(self):
@@ -140,6 +152,16 @@ class SettingsDialog(QDialog):
         self.auto_update_check = QCheckBox('起動時にアプリを自動更新する (default=on)')
         layout.addWidget(self.auto_update_check)
 
+        self.auto_tweet_on_exit_check = QCheckBox('終了時に打鍵数を自動でツイートする (default=off)')
+        layout.addWidget(self.auto_tweet_on_exit_check)
+
+        self.count_log_enabled_check = QCheckBox('打鍵数ログ取得 (default=off)')
+        self.count_log_enabled_check.stateChanged.connect(self.update_count_log_options)
+        layout.addWidget(self.count_log_enabled_check)
+
+        self.count_log_auto_reset_check = QCheckBox('打鍵数ログ: 起動時に自動リセットする (default=on)')
+        layout.addWidget(self.count_log_auto_reset_check)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.save)
         buttons.rejected.connect(self.reject)
@@ -153,9 +175,16 @@ class SettingsDialog(QDialog):
         self.port_entry.setText(str(self.settings.port))
         self.debug_mode_check.setChecked(self.settings.debug_mode)
         self.auto_update_check.setChecked(self.settings.auto_update)
+        self.auto_tweet_on_exit_check.setChecked(self.settings.auto_tweet_on_exit)
+        self.count_log_enabled_check.setChecked(self.settings.count_log_enabled)
+        self.count_log_auto_reset_check.setChecked(self.settings.count_log_auto_reset)
+        self.update_count_log_options()
         button = self.playmode_group.button(self.settings.playmode.value)
         if button is not None:
             button.setChecked(True)
+
+    def update_count_log_options(self):
+        self.count_log_auto_reset_check.setEnabled(self.count_log_enabled_check.isChecked())
 
     def is_valid_ip(self, address):
         try:
@@ -190,6 +219,9 @@ class SettingsDialog(QDialog):
             self.settings.density_interval = density_interval
             self.settings.debug_mode = self.debug_mode_check.isChecked()
             self.settings.auto_update = self.auto_update_check.isChecked()
+            self.settings.auto_tweet_on_exit = self.auto_tweet_on_exit_check.isChecked()
+            self.settings.count_log_enabled = self.count_log_enabled_check.isChecked()
+            self.settings.count_log_auto_reset = self.count_log_auto_reset_check.isChecked()
             self.settings.playmode = playmode(self.playmode_group.checkedId())
             self.settings.save()
             self.settings.write_websocket_settings()
