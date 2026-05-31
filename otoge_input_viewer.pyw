@@ -12,6 +12,7 @@ import time
 from collections import defaultdict
 import logging, logging.handlers
 from src.settings import Settings, playmode, SettingsDialog
+from src.key_config import KeyConfigDialog, event_to_spec, spec_key, target_definitions, target_to_event_data
 from src.update import GitHubUpdater
 import traceback
 import urllib
@@ -54,6 +55,7 @@ class JoystickWebSocketServer(QMainWindow):
     label_update_requested = Signal(object, str, str)
     button_enabled_requested = Signal(object, bool)
     counter_update_requested = Signal()
+    key_config_event_received = Signal(dict)
 
     def __init__(self):
         super().__init__()
@@ -74,11 +76,14 @@ class JoystickWebSocketServer(QMainWindow):
         # スクラッチ判定用
         self.pre_scr_val = [None, None]
         self.pre_scr_direction = [-1, -1]
+        self.pre_mapped_axis_val = {}
+        self.pre_mapped_axis_direction = {}
         self.list_density = []
         self.settings = Settings()
         logger.debug(f'settings = {self.settings.__dict__}')
 
         self.joystick = [None, None]
+        self.key_config_dialog = None
 
         self.move(self.settings.lx, self.settings.ly)
 
@@ -132,6 +137,7 @@ class JoystickWebSocketServer(QMainWindow):
         """
         settings_menu = self.menuBar().addMenu("file")
         settings_menu.addAction(QAction("config", self, triggered=self.open_settings_dialog))
+        settings_menu.addAction(QAction("キーイベント登録", self, triggered=self.open_key_config_dialog))
         settings_menu.addAction(QAction("update", self, triggered=lambda:self.check_updates(True)))
         settings_menu.addAction(QAction("reset counter", self, triggered=self.reset_counter))
         settings_menu.addAction(QAction("tweet", self, triggered=self.tweet))
@@ -252,6 +258,15 @@ class JoystickWebSocketServer(QMainWindow):
                 self.set_label_text(self.joystick_info[1], f"joypad disconnected", 'red')
                 self.settings.connected_idx[1] = None
         self.toggle_server()
+
+    def open_key_config_dialog(self):
+        """キーイベント登録ウィンドウを開く
+        """
+        dialog = KeyConfigDialog(self, self.settings)
+        self.key_config_dialog = dialog
+        dialog.exec()
+        self.key_config_dialog = None
+        self.settings.load()
 
     def change_joystick(self, controller_pos:int):
         """検出するジョイパッドを変更する
@@ -421,6 +436,15 @@ class JoystickWebSocketServer(QMainWindow):
             time.sleep(1)
 
     def is_valid_event(self, event):
+        if self.has_key_config():
+            if self.is_mapped_event(event) or event.type in (pygame.JOYDEVICEADDED, pygame.JOYDEVICEREMOVED):
+                return True
+            if self.default_target_is_configured(event):
+                return False
+            return self.is_valid_default_event(event)
+        return self.is_valid_default_event(event)
+
+    def is_valid_default_event(self, event):
         ret = False
         if event.type == pygame.JOYBUTTONDOWN:
             if self.settings.playmode == playmode.iidx_sp:
@@ -448,6 +472,94 @@ class JoystickWebSocketServer(QMainWindow):
             logger.debug(f'ret = {ret}')
         return ret
 
+    def has_key_config(self):
+        mode_config = getattr(self.settings, "key_config", {}).get(self.settings.playmode.name, {})
+        return any(mode_config.values())
+
+    def joystick_name_from_event(self, event):
+        try:
+            if hasattr(event, 'joy'):
+                return pygame.joystick.Joystick(event.joy).get_name()
+        except pygame.error:
+            pass
+        return ""
+
+    def event_spec_from_pygame(self, event):
+        if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP):
+            return event_to_spec(event, self.joystick_name_from_event(event), "button")
+        if event.type == pygame.JOYAXISMOTION:
+            return event_to_spec(event, self.joystick_name_from_event(event), "axis")
+        return None
+
+    def is_key_config_capturing(self):
+        return self.key_config_dialog is not None and self.key_config_dialog.capture_target_id is not None
+
+    def is_registerable_event(self, event):
+        if event.type == pygame.JOYBUTTONDOWN:
+            return True
+        if event.type == pygame.JOYAXISMOTION:
+            return True
+        return False
+
+    def mapped_targets_by_spec(self):
+        mode_name = self.settings.playmode.name
+        mode_config = getattr(self.settings, "key_config", {}).get(mode_name, {})
+        targets = {target["id"]: target for target in target_definitions(mode_name)}
+        ret = {}
+        for target_id, spec in mode_config.items():
+            target = targets.get(target_id)
+            if spec and target:
+                ret[spec_key(spec)] = target
+        return ret
+
+    def configured_target_ids(self):
+        mode_config = getattr(self.settings, "key_config", {}).get(self.settings.playmode.name, {})
+        return {target_id for target_id, spec in mode_config.items() if spec}
+
+    def default_target_id_from_event(self, event):
+        controller_side = 0
+        if hasattr(event, 'joy') and self.settings.connected_idx[0] != event.joy:
+            controller_side = 1
+        if self.settings.playmode == playmode.iidx_sp:
+            if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP) and 0 <= event.button <= 6:
+                return f"k{event.button + 1}"
+            if event.type == pygame.JOYAXISMOTION and event.axis == 0:
+                return "scr"
+        elif self.settings.playmode == playmode.iidx_dp:
+            prefix = f"p{controller_side + 1}"
+            if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP) and 0 <= event.button <= 6:
+                return f"{prefix}_k{event.button + 1}"
+            if event.type == pygame.JOYAXISMOTION and event.axis == 0:
+                return f"{prefix}_scr"
+        elif self.settings.playmode == playmode.sdvx:
+            button_targets = {
+                1: "bt_a",
+                2: "bt_b",
+                3: "bt_c",
+                4: "bt_d",
+                5: "fx_l",
+                6: "fx_r",
+            }
+            axis_targets = {
+                0: "vol_l",
+                1: "vol_r",
+            }
+            if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP):
+                return button_targets.get(event.button)
+            if event.type == pygame.JOYAXISMOTION:
+                return axis_targets.get(event.axis)
+        return None
+
+    def default_target_is_configured(self, event):
+        target_id = self.default_target_id_from_event(event)
+        return target_id is not None and target_id in self.configured_target_ids()
+
+    def is_mapped_event(self, event):
+        spec = self.event_spec_from_pygame(event)
+        if spec is None:
+            return False
+        return spec_key(spec) in self.mapped_targets_by_spec()
+
     def monitor_thread(self):
         """ジョイパッドの入力イベントを受け取るループ
         """
@@ -457,16 +569,67 @@ class JoystickWebSocketServer(QMainWindow):
                 for event in pygame.event.get():
                     if self.settings.debug_mode:
                         logger.debug(event)
+                    if self.is_key_config_capturing() and self.is_registerable_event(event):
+                        spec = self.event_spec_from_pygame(event)
+                        if spec:
+                            self.key_config_event_received.emit(spec)
+                        continue
                     # モードごとに必要なノートのみ通すための判定処理
                     if not self.is_valid_event(event):
                         continue
-                    self.process_joystick_event(event)
+                    if self.has_key_config() and self.is_mapped_event(event):
+                        self.process_mapped_joystick_event(event)
+                    else:
+                        self.process_joystick_event(event)
                 if pygame.joystick.get_count() == 0:
                     for i in range(2):
                         self.label_update_requested.emit(self.joystick_info[i], f"joypad disconnected", 'red')
             except Exception as e:
                 logger.debug(traceback.format_exc())
             pygame.time.wait(20)
+
+    def dispatch_event_data(self, event_data, count_notes=False, count_key=False, count_other=False):
+        if count_notes:
+            self.today_notes += 1
+            if count_key:
+                self.today_keys += 1
+            if count_other:
+                self.today_others += 1
+            self.counter_update_requested.emit()
+            self.event_queue.put({'type':'notes', 'value':self.today_notes})
+        self.calc_queue.put(event_data)
+        self.event_queue.put(event_data)
+
+    def process_mapped_joystick_event(self, event):
+        spec = self.event_spec_from_pygame(event)
+        if spec is None:
+            return
+        target = self.mapped_targets_by_spec().get(spec_key(spec))
+        if target is None:
+            return
+
+        if target["kind"] == "button":
+            if event.type == pygame.JOYBUTTONDOWN:
+                event_data = target_to_event_data(target, state='down')
+                self.dispatch_event_data(event_data, count_notes=True, count_key=True)
+            elif event.type == pygame.JOYBUTTONUP:
+                event_data = target_to_event_data(target, state='up')
+                self.dispatch_event_data(event_data)
+        elif target["kind"] == "axis" and event.type == pygame.JOYAXISMOTION:
+            axis_key = spec_key(spec)
+            out_direction = -1
+            if axis_key in self.pre_mapped_axis_val:
+                if event.value > self.pre_mapped_axis_val[axis_key]:
+                    out_direction = 1
+                elif event.value < self.pre_mapped_axis_val[axis_key]:
+                    out_direction = 0
+            self.pre_mapped_axis_val[axis_key] = event.value
+            if out_direction < 0:
+                return
+            event_data = target_to_event_data(target, direction=out_direction, value_org=event.value)
+            count_other = out_direction != self.pre_mapped_axis_direction.get(axis_key, -1)
+            self.pre_mapped_axis_direction[axis_key] = out_direction
+            self.dispatch_event_data(event_data, count_notes=count_other, count_other=count_other)
 
     def process_joystick_event(self, event):
         """1つのジョイパッド入力イベントを読み込んでwebsocket出力に変換する。

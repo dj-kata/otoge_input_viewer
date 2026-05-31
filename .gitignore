@@ -13,3 +13,5 @@ html/websocket.css
 settings.json
 update.exe
 .pyarmor/pack/*
+setup.py
+*/__pycache__/*

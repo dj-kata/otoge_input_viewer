@@ -41,10 +41,13 @@ class Settings:
         self.debug_mode = False # コントローラ入力の全dumpなど
         self.auto_update = True # 自動アップデート
         self.playmode = playmode.iidx_sp
+        self.key_config = {}
         #self.log_offset = '0'
         self.table_url = ['https://stellabms.xyz/sl/table.html', 'https://mirai-yokohama.sakura.ne.jp/bms/insane_bms.html']
 
         self.load()
+        if not hasattr(self, 'key_config') or type(self.key_config) is not dict:
+            self.key_config = {}
         self.save()
         self.write_websocket_settings()
 
@@ -59,6 +62,7 @@ class Settings:
         print(f"playmode={self.playmode.name}")
         print(f"debug_mode={self.debug_mode}")
         print(f"auto_update={self.auto_update}")
+        print(f"key_config={self.key_config}")
 
     def load(self):
         try:

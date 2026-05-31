@@ -4,7 +4,7 @@ target=$(outdir)/.built
 target_zip=otoge_input_viewer.zip
 srcs=$(wildcard *.py) $(wildcard *.pyw) $(wildcard src/*.py) src/icon.ico
 html_files=$(wildcard html/*.*)
-ZIP ?= zip -r
+ZIP ?= 7z a -tzip -mx=1 -mmt=on
 
 all: $(target_zip)
 $(target_zip): $(target) $(html_files) version.txt
