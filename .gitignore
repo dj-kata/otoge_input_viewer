@@ -15,3 +15,4 @@ update.exe
 .pyarmor/pack/*
 setup.py
 */__pycache__/*
+history.oiv
