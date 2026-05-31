@@ -13,7 +13,7 @@ body {
 }
 
 .background {
-    background-image: linear-gradient(rgba(0,0,0,0.65),rgba(0,0,0,0.65)),url(naoki.jpg);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url(naoki.jpg);
 }
 
 table.info {
@@ -34,15 +34,15 @@ table.info {
     --disp-release-each-key: 1;
     --disp-release-eachkey: var(--disp-release-each-key);
     /* 鍵盤を押していないときの背景色 */
-    --bg-off: rgba(0,0,0, 0.35);
+    --bg-off: rgba(0, 0, 0, 0.35);
     --bg-keys-off: var(--bg-off);
-    --bg-scratch-off: var(--bg-off);
+    --bg-scratch-off: var(0, 0, 0, 0.98);
     /* 鍵盤を押した時のエフェクトで使う内側の色 */
-    --bg-on-inner: rgba(255,255,255, 0.55);
+    --bg-on-inner: rgba(255, 255, 255, 0.55);
     /* 鍵盤を押した時のエフェクトで使うメインの色 */
     --bg-on-main: rgba(170, 221, 255, 0.95);
     /* 鍵盤を押した時のエフェクトで使うサブの色(SDVXのFXとか右つまみとかで使用) */
-    --bg-on-sub: rgba(255,34,120,0.55);
+    --bg-on-sub: rgba(255, 34, 120, 0.55);
 
     /* ***鍵盤ごとの個別リリース関連設定*** */
     /* リリース値小～中の境界値 */
