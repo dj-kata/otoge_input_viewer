@@ -14,10 +14,20 @@ body {
 
 .background {
     background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url(naoki.jpg);
+    padding-top: 28px;
+    padding-left: 18px;
+    box-sizing: border-box;
+}
+
+.top {
+    gap: 18px;
 }
 
 table.info {
-    padding-top: 40px;
+    width: calc(100% - 18px);
+    padding-top: 32px;
+    box-sizing: border-box;
+    table-layout: auto;
 }
 
 .btn {
@@ -26,7 +36,7 @@ table.info {
 }
 
 :root {
-    --font-size-notes: 45px;
+    --font-size-notes: 35px;
     --scratch-right-lr2-mode: 0;
     /* 鍵盤やスクラッチなどで使う共通の枠線 */
     --border-common: #fee solid 5px;
@@ -58,18 +68,33 @@ table.info {
     --color-notes: #ff0;
 }
 
+table.info td:nth-child(4) {
+    padding-right: 8px;
+}
+
+table.info td:nth-child(5) {
+    text-align: right;
+    width: 6ch;
+}
+
 /* 統計情報のフォントを変更 */
 release {
+    width: 3ch;
     font-family: "DSEG14Classic";
     font-weight: bold;
 }
 
 notes {
+    display: inline-block;
+    width: 6ch;
     font-family: "DSEG14Classic";
     font-weight: bold;
+    text-align: right;
+    white-space: nowrap;
 }
 
 density {
+    width: 4ch;
     font-family: "DSEG14Classic";
     font-weight: bold;
 }
