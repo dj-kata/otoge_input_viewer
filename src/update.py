@@ -2,16 +2,12 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import json
 import requests
-import zipfile
 import shutil
 import subprocess
 import threading
-import time
 from pathlib import Path
 from packaging import version
-from urllib.parse import urlparse
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
@@ -48,22 +44,32 @@ class GitHubUpdater(QObject):
     error_requested = Signal(str)
     cancel_requested = Signal()
 
-    def __init__(self, github_author='', github_repo='', current_version='', main_exe_name=None, updator_exe_name=None):
+    def __init__(
+        self,
+        github_author='',
+        github_repo='',
+        zipfile_basename=None,
+        current_version='',
+        main_exe_name=None,
+        updator_exe_name=None,
+    ):
         """
         GitHub自動アップデータの初期化
         
         Args:
-            github_repo (str): GitHubリポジトリ（例: "username/repository"）
+            github_repo (str): GitHubリポジトリ名
+            zipfile_basename (str): リリースzipのベース名
             current_version (str): 現在のバージョン（例: "1.0.0"）
             main_exe_name (str): メインプログラムのexe名（例: "main.exe"）
-            updator_exe_name (str): アップデート用プログラムのexe名 (例: "update.exe"）
+            updator_exe_name (str): 更新対象exe名。未指定時はメインexeと同じ。
         """
         super().__init__()
         self.github_author = github_author
         self.github_repo = github_repo
+        self.zipfile_basename = zipfile_basename or github_repo
         self.current_version = current_version
         self.main_exe_name = main_exe_name or "main.exe"
-        self.updator_exe_name = updator_exe_name or "update.exe"
+        self.updator_exe_name = updator_exe_name or self.main_exe_name
         self.base_dir = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path.cwd()
         self.temp_dir = self.base_dir / "tmp"
         self.backup_dir = self.base_dir / "backup"
@@ -86,8 +92,9 @@ class GitHubUpdater(QObject):
         r = requests.get(url)
         soup = BeautifulSoup(r.text,features="html.parser")
         for tag in soup.find_all('a'):
-            if 'releases/tag/v.' in tag['href']:
-                ret = tag['href'].split('/')[-1]
+            href = tag.get('href', '')
+            if 'releases/tag/' in href:
+                ret = href.split('/')[-1]
                 break # 1番上が最新なので即break
         return ret
 
@@ -100,14 +107,22 @@ class GitHubUpdater(QObject):
         """
         logger.debug(f"github_repo:{self.github_author}/{self.github_repo}")
         try:
-            latest_version = self.get_latest_version()[2:]
-            download_url = f"https://github.com/{self.github_author}/{self.github_repo}/releases/download/v.{latest_version}/{self.github_repo}.zip"
+            latest_tag = self.get_latest_version()
+            if latest_tag is None:
+                return False, None, None
+
+            latest_version = latest_tag.split("v.")[-1]
+            current_version = str(self.current_version).split("v.")[-1]
+            download_url = (
+                f"https://github.com/{self.github_author}/{self.github_repo}"
+                f"/releases/download/{latest_tag}/{self.zipfile_basename}.zip"
+            )
             
             # バージョン比較
-            if version.parse(latest_version) > version.parse(self.current_version):
-                return True, latest_version, download_url
+            if version.parse(latest_version) > version.parse(current_version):
+                return True, latest_tag, download_url
             else:
-                return False, latest_version, None
+                return False, latest_tag, None
                 
         except Exception as e:
             print(f"アップデートチェックエラー: {e}")
@@ -195,36 +210,46 @@ class GitHubUpdater(QObject):
                 shutil.copy2(item, self.backup_dir)
     
     def replace_files2(self):
-        target_dir = '.'
         logger.debug(f'now moving..., repo:{self.github_repo}')
-        p = Path(f'tmp/{self.github_repo}')
+        p = self.temp_dir / self.zipfile_basename
+        if not p.exists():
+            dirs = [x for x in self.temp_dir.iterdir() if x.is_dir()]
+            if len(dirs) == 1:
+                p = dirs[0]
+            else:
+                p = self.temp_dir
         failed_list = []
         logger.debug('now moving...')
         for f in p.iterdir():
             logger.debug(f"f:{f}, is_dir:{f.is_dir()}")
             if f.is_dir():
-                subdir=f.relative_to(f'tmp/{self.github_repo}')
+                subdir = f.relative_to(p)
                 logger.debug(f"mkdir {subdir}")
-                os.makedirs(subdir, exist_ok=True)
+                (self.base_dir / subdir).mkdir(parents=True, exist_ok=True)
         for f in p.glob('**/*.*'):
             try:
-                base = str(f.relative_to(f'tmp/{self.github_repo}'))
-                if self.updator_exe_name in str(f):
-                    shutil.copy2(str(f), target_dir+'/new_'+base)
-                    logger.debug(f"from={str(f)}, to={target_dir+'/new_'+base}")
+                base = f.relative_to(p)
+                if base.name == self.updator_exe_name:
+                    target = self.base_dir / f"new_{self.updator_exe_name}"
+                    shutil.copy2(str(f), target)
+                    logger.debug(f"from={str(f)}, to={target}")
                 else:
-                    shutil.move(str(f), target_dir+'/'+base)
-                    logger.debug(f"from={str(f)}, to={target_dir+'/'+base}")
+                    target = self.base_dir / base
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(f), target)
+                    logger.debug(f"from={str(f)}, to={target}")
             except Exception:
                 if self.updator_exe_name not in str(f):
                     failed_list.append(f)
                 logger.debug(f"error! ({f})")
                 logger.debug(traceback.format_exc())
-        shutil.rmtree(f'tmp/{self.github_repo}')
+        if self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
         out = ''
         if len(failed_list) > 0:
             out = '更新に失敗したファイル(tmp/tmp.zipから手動展開してください): '
-            out += '\n'.join(failed_list)
+            out += '\n'.join(str(f) for f in failed_list)
+            logger.warning(out)
 
     def create_restart_script(self, new_exe_path):
         logger.info('')
@@ -233,11 +258,33 @@ class GitHubUpdater(QObject):
             script_path = self.base_dir / "restart_update.bat"
             script_content = f"""@echo off
 timeout /t 2 /nobreak >nul
-move "{new_exe_path}" "{self.base_dir / self.updator_exe_name}"
-start "" "{self.main_exe_name}"
+taskkill /f /im "{self.main_exe_name}" >nul 2>&1
+
+:retry_move
+timeout /t 1 /nobreak >nul
+if exist "{new_exe_path}" (
+    move /y "{new_exe_path}" "{self.base_dir / self.updator_exe_name}" >nul 2>&1
+    if exist "{new_exe_path}" (
+        echo 更新ファイルの差し替えを再試行中...
+        goto retry_move
+    )
+)
+
+start "" "{self.base_dir / self.main_exe_name}"
 del "%~f0"
 """
             with open(script_path, 'w', encoding='shift_jis') as f:
+                f.write(script_content)
+            os.chmod(script_path, 0o755)
+        else:
+            script_path = self.base_dir / "restart_update.sh"
+            script_content = f"""#!/bin/sh
+sleep 2
+mv "{new_exe_path}" "{self.base_dir / self.updator_exe_name}"
+"{self.base_dir / self.main_exe_name}" &
+rm -- "$0"
+"""
+            with open(script_path, 'w', encoding='utf-8') as f:
                 f.write(script_content)
             os.chmod(script_path, 0o755)
         
@@ -261,66 +308,15 @@ del "%~f0"
             self.app.quit()
         sys.exit(0)
     
-    def run_update(self):
-        """アップデート実行"""
-        try:
-            # 最新版をチェック
-            is_update_available, latest_version, download_url = self.check_for_updates()
-            
-            if not is_update_available:
-                QMessageBox.information(self.root, "更新確認", "お使いのバージョンは最新です。")
-                if self.root:
-                    self.root.close()
-                return False
-            
-            # GUIを表示
-            if not self.root:
-                self.create_gui()
-            
-            # ダウンロード
-            zip_path = self.temp_dir / f"update_{latest_version}.zip"
-            self.temp_dir.mkdir(exist_ok=True)
-            
-            self.download_file(download_url, zip_path)
-            
-            # 解凍・置き換え
-            self.extract_and_replace_files(zip_path)
-
-            self.update_status("更新完了！プログラムを再起動します...", 100)
-            time.sleep(2)
-            
-            # 再起動スクリプトを実行
-            script_path = self.base_dir / ("restart_update.bat" if sys.platform.startswith('win') 
-                                         else "restart_update.sh")
-            if script_path.exists():
-                if sys.platform.startswith('win'):
-                    subprocess.Popen([str(script_path)], shell=True)
-                else:
-                    subprocess.Popen(['/bin/bash', str(script_path)])
-                
-                if self.root:
-                    self.root.close()
-                sys.exit(0)
-            
-            return True
-            
-        except Exception as e:
-            error_msg = f"更新エラー: {e}"
-            print(error_msg)
-            if self.root:
-                QMessageBox.warning(self.root, "エラー", error_msg)
-            self.cleanup()
-            return False
-    
     def extract_zip_file(self, zip_path):
         """zipファイルを解凍する。tmp直下にそのまま解凍する。
 
         Args:
             zip_path (str): path of zipfile
         """
-        shutil.unpack_archive(zip_path, 'tmp')
+        shutil.unpack_archive(zip_path, self.temp_dir)
 
-    def check_and_update(self):
+    def check_and_update(self, show_no_update=False):
         """
         メインプログラムから呼び出す関数
         アップデートが必要な場合のみGUIを表示して更新実行
@@ -330,7 +326,6 @@ del "%~f0"
         """
         logger.info('check and update')
         try:
-            self.create_gui()
             # アップデート確認（GUIなし）
             is_update_available, latest_version, download_url = self.check_for_updates()
             logger.info(f"available:{is_update_available}, latest:{latest_version}, url:{download_url}")
@@ -348,6 +343,7 @@ del "%~f0"
                 )
                 
                 if result == QMessageBox.Yes:
+                    self.create_gui()
                     self.cleanup()
                     
                     # 別スレッドで更新実行
@@ -364,7 +360,7 @@ del "%~f0"
                             logger.info('replace')
                             self.replace_files2()
                             
-                            new_exe_path = Path('.') / f"new_{self.updator_exe_name}"
+                            new_exe_path = self.base_dir / f"new_{self.updator_exe_name}"
                             # 更新完了後にメインプログラムを再起動するためのバッチファイルを作成
                             self.create_restart_script(new_exe_path)
 
@@ -381,10 +377,17 @@ del "%~f0"
                     thread = threading.Thread(target=update_thread, daemon=True)
                     thread.start()
                     
-                    self.app.exec()
+                    if self.app and self._qt_event_loop_level() == 0:
+                        self.app.exec()
                     return True
             else:
                 logger.info('no update')
+                if show_no_update:
+                    QMessageBox.information(
+                        self.root,
+                        "Otoge Input Viewer",
+                        f"お使いのバージョンは最新です({self.current_version})",
+                    )
                 if self.root:
                     self.root.close()
             return False
@@ -393,6 +396,14 @@ del "%~f0"
             logger.debug(traceback.format_exc())
             print(f"アップデート確認エラー: {e}")
             return False
+
+    def _qt_event_loop_level(self):
+        if not self.app:
+            return 0
+        try:
+            return self.app.thread().loopLevel()
+        except AttributeError:
+            return 0
     
     def restart_program(self):
         """プログラム再起動"""
@@ -408,28 +419,3 @@ del "%~f0"
             if self.root:
                 self.root.close()
             sys.exit(0)
-
-
-def main():
-    try:
-        with open('version.txt', 'r') as f:
-            SWVER = f.readline().strip()[2:]
-    except Exception:
-        logger.debug(traceback.format_exc())
-        SWVER = "0.0.0"
-    #SWVER='1.0.0' # for test
-
-    updater = GitHubUpdater(
-        github_author='dj-kata',
-        github_repo='otoge_input_viewer',
-        current_version=SWVER,           # 現在のバージョン
-        main_exe_name="otoge_input_viewer.exe",  # メインプログラムのexe名
-        updator_exe_name="update.exe",           # アップデート用プログラムのexe名
-    )
-    
-    # メインプログラムから呼び出す場合
-    updater.check_and_update()
-
-
-if __name__ == "__main__":
-    main()

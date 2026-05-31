@@ -12,9 +12,7 @@ import time
 from collections import defaultdict
 import logging, logging.handlers
 from src.settings import Settings, playmode, SettingsDialog
-import subprocess
-from bs4 import BeautifulSoup
-import requests
+from src.update import GitHubUpdater
 import traceback
 import urllib
 import webbrowser
@@ -92,45 +90,16 @@ class JoystickWebSocketServer(QMainWindow):
         if self.settings.auto_update:
             self.check_updates()
 
-    def get_latest_version(self):
-        """GitHubから最新版のバージョンを取得する。
-
-        Returns:
-            str: バージョン番号
-        """
-        ret = None
-        url = 'https://github.com/dj-kata/otoge_input_viewer/tags'
-        r = requests.get(url)
-        soup = BeautifulSoup(r.text,features="html.parser")
-        for tag in soup.find_all('a'):
-            if 'releases/tag/v.' in tag['href']:
-                ret = tag['href'].split('/')[-1]
-                break # 1番上が最新なので即break
-        return ret
-    
     def check_updates(self, always_disp_dialog=False):
-        ver = self.get_latest_version()
-        if (ver != SWVER) and (ver is not None):
-            logger.debug(f'現在のバージョン: {SWVER}, 最新版:{ver}')
-            ans = QMessageBox.question(
-                self,
-                'バージョン更新',
-                f'アップデートが見つかりました。\n\n{SWVER} -> {ver}\n\nアプリを終了して更新します。',
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
-            )
-            if ans == QMessageBox.Yes:
-                if os.path.exists('update.exe'):
-                    logger.info('アップデート確認のため終了します')
-                    res = subprocess.Popen('update.exe')
-                    print('fug')
-                    self.on_close()
-                else:
-                    raise ValueError("update.exeがありません")
-        else:
-            logger.debug(f'お使いのバージョンは最新です({SWVER})')
-            if always_disp_dialog:
-                QMessageBox.information(self, "Otoge Input Viewer", f'お使いのバージョンは最新です({SWVER})')
+        updater = GitHubUpdater(
+            github_author="dj-kata",
+            github_repo="otoge_input_viewer",
+            zipfile_basename="otoge_input_viewer",
+            current_version=SWVER,
+            main_exe_name="otoge_input_viewer.exe",
+            updator_exe_name="otoge_input_viewer.exe",
+        )
+        updater.check_and_update(show_no_update=always_disp_dialog)
 
     def get_uptime(self):
         """アプリの起起動時を文字列として返す

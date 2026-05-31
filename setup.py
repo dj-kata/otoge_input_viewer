@@ -126,12 +126,6 @@ executables = [
         shortcut_name="otoge_input_viewer",
         shortcut_dir="DesktopFolder",
     ),
-    Executable(
-        script="src/update.py",
-        base=base,
-        target_name="update.exe" if sys.platform == "win32" else "update",
-        icon=icon_path,
-    ),
 ]
 
 setup(
