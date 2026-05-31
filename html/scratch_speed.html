@@ -329,6 +329,7 @@
             var nowMs = performance.now();
             events.forEach(function(e) {
                 if (e.type !== 'axis') return;
+                if (e.value === 0) return;
 
                 // ラップアラウンド検出: value_org が前回値から急激に変化していたら無視
                 var valueOrg = e.value_org;
