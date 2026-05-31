@@ -1,6 +1,6 @@
 import copy
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -24,12 +24,18 @@ MODE_LABELS = {
     "sdvx": "SDVX",
 }
 
+DIALOG_SIZES = {
+    "iidx_sp": (640, 360),
+    "iidx_dp": (1120, 380),
+    "sdvx": (640, 470),
+}
+
 
 def target_definitions(mode_name):
     if mode_name == "iidx_sp":
         return [
-            {"id": "scr_up", "label": "SCR 上", "kind": "axis_dir", "axis": 0, "direction": 1, "controller_side": 0, "row": 0, "col": 0},
-            {"id": "scr_down", "label": "SCR 下", "kind": "axis_dir", "axis": 0, "direction": 0, "controller_side": 0, "row": 1, "col": 0},
+            {"id": "scr_up", "label": "SCR 上", "kind": "axis_dir", "axis": 0, "direction": 1, "output_direction": 0, "controller_side": 0, "row": 0, "col": 0},
+            {"id": "scr_down", "label": "SCR 下", "kind": "axis_dir", "axis": 0, "direction": 0, "output_direction": 1, "controller_side": 0, "row": 1, "col": 0},
             {"id": "k2", "label": "2", "kind": "button", "button": 1, "controller_side": 0, "row": 0, "col": 3, "colspan": 2},
             {"id": "k4", "label": "4", "kind": "button", "button": 3, "controller_side": 0, "row": 0, "col": 5, "colspan": 2},
             {"id": "k6", "label": "6", "kind": "button", "button": 5, "controller_side": 0, "row": 0, "col": 7, "colspan": 2},
@@ -42,9 +48,11 @@ def target_definitions(mode_name):
         defs = []
         for side, offset, side_label in ((0, 0, "左"), (1, 12, "右")):
             scratch_col = 0 if side == 0 else 22
+            scr_up_output = 1 if side == 0 else 0
+            scr_down_output = 0 if side == 0 else 1
             defs.extend([
-                {"id": f"p{side+1}_scr_up", "label": f"{side_label}SCR 上", "kind": "axis_dir", "axis": 0, "direction": 1, "controller_side": side, "row": 0, "col": scratch_col},
-                {"id": f"p{side+1}_scr_down", "label": f"{side_label}SCR 下", "kind": "axis_dir", "axis": 0, "direction": 0, "controller_side": side, "row": 1, "col": scratch_col},
+                {"id": f"p{side+1}_scr_up", "label": f"{side_label}SCR 上", "kind": "axis_dir", "axis": 0, "direction": 1, "output_direction": scr_up_output, "controller_side": side, "row": 0, "col": scratch_col},
+                {"id": f"p{side+1}_scr_down", "label": f"{side_label}SCR 下", "kind": "axis_dir", "axis": 0, "direction": 0, "output_direction": scr_down_output, "controller_side": side, "row": 1, "col": scratch_col},
                 {"id": f"p{side+1}_k2", "label": f"{side_label}2", "kind": "button", "button": 1, "controller_side": side, "row": 0, "col": offset + 3, "colspan": 2},
                 {"id": f"p{side+1}_k4", "label": f"{side_label}4", "kind": "button", "button": 3, "controller_side": side, "row": 0, "col": offset + 5, "colspan": 2},
                 {"id": f"p{side+1}_k6", "label": f"{side_label}6", "kind": "button", "button": 5, "controller_side": side, "row": 0, "col": offset + 7, "colspan": 2},
@@ -142,7 +150,7 @@ def target_to_event_data(target, state=None, direction=None, value=1, value_org=
             "state": state,
             "controller_side": target["controller_side"],
         }
-    direction = target.get("direction", direction)
+    direction = target.get("output_direction", target.get("direction", direction))
     return {
         "type": "axis",
         "axis": target["axis"],
@@ -182,6 +190,7 @@ class KeyConfigDialog(QDialog):
         self.mode_combo = None
         self.grid_container = None
         self.grid_layout = None
+        self.scroll_area = None
         self.status_label = None
         self.parent().key_config_event_received.connect(self.receive_event)
         self.create_widgets()
@@ -201,15 +210,15 @@ class KeyConfigDialog(QDialog):
         self.status_label = QLabel("入力欄をクリックして、割り当てたいコントローラ入力を押してください。Escでキャンセル。")
         layout.addWidget(self.status_label)
 
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
         self.grid_container = QWidget(self)
         self.grid_layout = QGridLayout(self.grid_container)
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
         self.grid_layout.setHorizontalSpacing(2)
         self.grid_layout.setVerticalSpacing(8)
-        scroll_area.setWidget(self.grid_container)
-        layout.addWidget(scroll_area)
+        self.scroll_area.setWidget(self.grid_container)
+        layout.addWidget(self.scroll_area)
 
         cur_index = self.mode_combo.findData(self.settings.playmode.name)
         if cur_index >= 0:
@@ -260,6 +269,16 @@ class KeyConfigDialog(QDialog):
             self.inputs[target["id"]] = entry
             self.grid_layout.addWidget(cell, target["row"], target["col"], 1, target.get("colspan", 1))
         self.capture_target_id = None
+        QTimer.singleShot(0, self.resize_for_current_mode)
+
+    def resize_for_current_mode(self):
+        width, height = DIALOG_SIZES.get(self.current_mode_name(), (640, 420))
+        screen = self.screen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            width = min(width, max(360, available.width() - 80))
+            height = min(height, max(300, available.height() - 80))
+        self.resize(width, height)
 
     def start_capture(self, target_id):
         self.capture_target_id = target_id
