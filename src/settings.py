@@ -32,6 +32,8 @@ class Settings:
     def __init__(self):
         self.lx = 50
         self.ly = 50
+        self.lw = 0
+        self.lh = 0
         self.ln_threshold = 225
         self.size_release_hist = 200
         self.size_release_key_hist = 30
@@ -57,11 +59,16 @@ class Settings:
             self.count_log_enabled = False
         if not hasattr(self, 'count_log_auto_reset'):
             self.count_log_auto_reset = True
+        if not hasattr(self, 'lw'):
+            self.lw = 0
+        if not hasattr(self, 'lh'):
+            self.lh = 0
         self.save()
         self.write_websocket_settings()
 
     def disp(self):
         print(f"lx, ly = {self.lx}, {self.ly}")
+        print(f"lw, lh = {self.lw}, {self.lh}")
         print(f"ln_threshold={self.ln_threshold}")
         print(f"port = {self.port}")
         print(f"size_release_hist={self.size_release_hist}")

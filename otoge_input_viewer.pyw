@@ -109,6 +109,8 @@ class JoystickWebSocketServer(QMainWindow):
         self.move(self.settings.lx, self.settings.ly)
 
         self.setup_gui()
+        if self.settings.lw > 0 and self.settings.lh > 0:
+            self.resize(self.settings.lw, self.settings.lh)
         self.update_counter_display()
         self.init_pygame()
         self.start_monitor()
@@ -251,10 +253,13 @@ class JoystickWebSocketServer(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(6, 4, 6, 6)
         layout.setSpacing(2)
+        layout.setAlignment(Qt.AlignTop)
         self.setCentralWidget(central)
 
         ctr_layout = QGridLayout()
         ctr_layout.setContentsMargins(0, 0, 0, 0)
+        ctr_layout.setColumnStretch(0, 1)
+        ctr_layout.setColumnStretch(1, 0)
         layout.addLayout(ctr_layout)
 
         # ジョイパッド情報
@@ -265,7 +270,7 @@ class JoystickWebSocketServer(QMainWindow):
         # コントローラ変更ボタン1
         self.change_joystick_btn = QPushButton("change")
         self.change_joystick_btn.clicked.connect(lambda: self.change_joystick(0))
-        ctr_layout.addWidget(self.change_joystick_btn, 0, 1, alignment=Qt.AlignLeft)
+        ctr_layout.addWidget(self.change_joystick_btn, 0, 1, alignment=Qt.AlignRight)
 
         # ジョイパッド情報
         self.joystick_info.append(QLabel("接続ジョイパッド: なし"))
@@ -274,7 +279,7 @@ class JoystickWebSocketServer(QMainWindow):
         # コントローラ変更ボタン2
         self.change_joystick_btn2 = QPushButton("change")
         self.change_joystick_btn2.clicked.connect(lambda: self.change_joystick(1))
-        ctr_layout.addWidget(self.change_joystick_btn2, 1, 1, alignment=Qt.AlignLeft)
+        ctr_layout.addWidget(self.change_joystick_btn2, 1, 1, alignment=Qt.AlignRight)
         if self.settings.playmode != playmode.iidx_dp:
             self.change_joystick_btn2.setEnabled(False)
 
@@ -1151,6 +1156,8 @@ class JoystickWebSocketServer(QMainWindow):
         self.save_count_history()
         self.settings.lx = self.x()
         self.settings.ly = self.y()
+        self.settings.lw = self.width()
+        self.settings.lh = self.height()
         self.settings.save()
         pygame.quit()
         QApplication.quit()
