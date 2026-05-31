@@ -11,17 +11,15 @@ import json
 import time
 from collections import defaultdict
 import logging, logging.handlers
-from settings import Settings, playmode, SettingsDialog
+from src.settings import Settings, playmode, SettingsDialog
 import subprocess
 from bs4 import BeautifulSoup
 import requests
 import traceback
 import urllib
 import webbrowser
-import base64
-import icon
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QIcon, QPixmap
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QGridLayout,
@@ -54,12 +52,6 @@ except Exception:
     SWVER = "v?.?.?"
 
 
-def qt_icon():
-    pixmap = QPixmap()
-    pixmap.loadFromData(base64.b64decode(icon.icon_data))
-    return QIcon(pixmap)
-
-
 class JoystickWebSocketServer(QMainWindow):
     label_update_requested = Signal(object, str, str)
     button_enabled_requested = Signal(object, bool)
@@ -69,7 +61,7 @@ class JoystickWebSocketServer(QMainWindow):
         super().__init__()
         self.time_start = time.perf_counter()
         self.setWindowTitle("Otoge Input Viewer")
-        self.setWindowIcon(qt_icon())
+        self.setWindowIcon(QIcon("src/icon.ico"))
         self.label_update_requested.connect(self.set_label_text)
         self.button_enabled_requested.connect(self.set_button_enabled)
         self.counter_update_requested.connect(self.update_counter_display)
@@ -695,6 +687,7 @@ class JoystickWebSocketServer(QMainWindow):
 if __name__ == "__main__":
     try:
         qt_app = QApplication(sys.argv)
+        qt_app.setWindowIcon(QIcon("src/icon.ico"))
         app = JoystickWebSocketServer()
         app.setMinimumSize(300, 200)
         app.show()

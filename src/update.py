@@ -12,10 +12,9 @@ import time
 from pathlib import Path
 from packaging import version
 from urllib.parse import urlparse
-import base64
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -29,7 +28,6 @@ from PySide6.QtWidgets import (
 import logging, logging.handlers
 import traceback
 from bs4 import BeautifulSoup
-import icon
 
 os.makedirs('log', exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -44,12 +42,6 @@ hdl.setLevel(logging.DEBUG)
 hdl_formatter = logging.Formatter('%(asctime)s %(filename)s:%(lineno)5d %(funcName)s() [%(levelname)s] %(message)s')
 hdl.setFormatter(hdl_formatter)
 logger.addHandler(hdl)
-
-def qt_icon():
-    pixmap = QPixmap()
-    pixmap.loadFromData(base64.b64decode(icon.icon_data))
-    return QIcon(pixmap)
-
 
 class GitHubUpdater(QObject):
     status_update_requested = Signal(str, object)
@@ -88,15 +80,7 @@ class GitHubUpdater(QObject):
         self.error_requested.connect(lambda message: QMessageBox.warning(self.root, "エラー", message))
         self.cancel_requested.connect(self.cancel_update)
 
-    def ico_path(self, relative_path):
-        try:
-            base_path = sys._MEIPASS
-        except Exception:
-            base_path = os.path.abspath(".")
-        return os.path.join(base_path, relative_path)
-
     def get_latest_version(self):
-        self.ico=self.ico_path('icon.ico')
         ret = None
         url = f'https://github.com/{self.github_author}/{self.github_repo}/tags'
         r = requests.get(url)
@@ -134,7 +118,7 @@ class GitHubUpdater(QObject):
         if self.app is None:
             self.app = QApplication(sys.argv)
         self.root = QDialog()
-        self.root.setWindowIcon(qt_icon())
+        self.root.setWindowIcon(QIcon("src/icon.ico"))
         self.root.setWindowTitle("プログラム更新中...")
         self.root.setFixedSize(500, 200)
 

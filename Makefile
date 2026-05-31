@@ -2,7 +2,7 @@ wuv ?= /mnt/c/Users/katao/.local/bin/uv.exe
 outdir=otoge_input_viewer
 target=$(outdir)/.built
 target_zip=otoge_input_viewer.zip
-srcs=$(wildcard *.py) $(wildcard *.pyw)
+srcs=$(wildcard *.py) $(wildcard *.pyw) $(wildcard src/*.py) src/icon.ico
 html_files=$(wildcard html/*.*)
 ZIP ?= zip -r
 
@@ -18,6 +18,7 @@ $(target): $(srcs) $(html_files) version.txt setup.py
 	@rm -rf $(outdir)
 	@$(wuv) run setup.py build
 	@rm -f $(outdir)/lib/PySide6/Qt6WebEngine*.dll 2>/dev/null || true
+	@rm -rf src/*.egg-info $(outdir)/lib/src/*.egg-info
 	@touch $(target)
 
 dist: 
@@ -28,6 +29,7 @@ dist:
 clean:
 	@rm -rf $(outdir)
 	@rm -rf __pycache__
+	@rm -rf src/__pycache__ src/*.egg-info qt.conf
 
 test:
 	@$(wuv) run python otoge_input_viewer.pyw

@@ -18,6 +18,14 @@ def existing_include_files(*pairs: tuple[str, str]) -> list[tuple[str, str]]:
     return result
 
 
+def src_modules() -> list[str]:
+    return sorted(
+        f"src.{path.stem}"
+        for path in (ROOT / "src").glob("*.py")
+        if path.name != "__init__.py"
+    )
+
+
 include_files: list[tuple[str, str]] = []
 
 try:
@@ -52,6 +60,7 @@ except ImportError:
 
 include_files += existing_include_files(
     ("html", "html"),
+    ("src/icon.ico", "src/icon.ico"),
     ("version.txt", "version.txt"),
 )
 
@@ -67,24 +76,20 @@ build_exe_options = {
         "websockets",
     ],
     "includes": [
+        *src_modules(),
         "asyncio",
         "ctypes",
         "ctypes.util",
         "ctypes.wintypes",
-        "icon",
-        "settings",
-        "update",
     ],
     "excludes": [
         "distutils",
         "matplotlib",
         "pandas",
         "pip",
-        "pyarmor",
         "PyInstaller",
         "setuptools",
         "test",
-        "tkinter",
         "unittest",
         "PySide6.Qt3DCore",
         "PySide6.Qt3DRender",
@@ -110,7 +115,7 @@ build_exe_options = {
 }
 
 base = "Win32GUI" if sys.platform == "win32" else None
-icon_path = "icon.ico" if os.path.exists("icon.ico") else None
+icon_path = "src/icon.ico" if os.path.exists("src/icon.ico") else None
 
 executables = [
     Executable(
@@ -122,7 +127,7 @@ executables = [
         shortcut_dir="DesktopFolder",
     ),
     Executable(
-        script="update.py",
+        script="src/update.py",
         base=base,
         target_name="update.exe" if sys.platform == "win32" else "update",
         icon=icon_path,
