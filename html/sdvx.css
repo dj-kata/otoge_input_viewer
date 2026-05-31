@@ -130,16 +130,25 @@ warning {
     color: red;
 }
 release {
+    display: inline-block;
+    width: 5ch;
     font-size: var(--font-size-release-total);
     color: var(--color-release-total);
     text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 density {
+    display: inline-block;
+    width: 5ch;
     font-size: var(--font-size-density);
     color: var(--color-density);
     text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 notes {
     font-size: var(--font-size-notes);
     color: var(--color-notes);
+    font-variant-numeric: tabular-nums;
 }

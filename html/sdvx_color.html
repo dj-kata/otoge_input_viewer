@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>Otoge Input Viewer(SDVX)</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="sdvx.css" />
+    <link rel="stylesheet" type="text/css" href="sdvx_color.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
+</head>
+<body>
+    <!-- getElementByIdのために先にHTMLを書いておく必要がある -->
+    <div id="eventLog"></div>
+
+    <warning>Not Connected!!</warning>
+
+  <div class="background">
+    <table id="outer">
+        <tr> <!-- ABCD -->
+            <td>
+                <table id="tumami">
+                    <tr> <!-- つまみ -->
+                        <td><div id="0-0" class="tumami0"></div></td>
+                        <td><div id="0-1" class="tumami1"></div></td>
+                    </tr>
+                </table>
+            </td>
+            <td></td>
+            <td>
+                <table id="tumami">
+                    <tr> <!-- つまみ -->
+                        <td><div id="1-0" class="tumami0"></div></td>
+                        <td><div id="1-1" class="tumami1"></div></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+
+        <tr> <!-- ABCD -->
+            <td></td>
+            <td>
+                <table id="ABCD">
+                    <tr>
+                        <td id="btn2" class="btn-u"></td>
+                        <td id="btn3" class="btn-u"></td>
+                        <td id="btn4" class="btn-u"></td>
+                        <td id="btn5" class="btn-u"></td>
+                    </tr>
+                </table>
+            </td>
+            <td></td>
+        </tr>
+
+        <tr> <!-- LR -->
+            <td></td>
+            <td>
+                <center>
+                <table id="LR">
+                    <tr>
+                        <td id="btn6" class="btn-d"></td>
+                        <td id="spacer1" class="btn-x"></td>
+                        <td id="btn7" class="btn-d"></td>
+                    </tr>
+                </table>
+                </center>
+            </td>
+            <td></td>
+        </tr>
+
+    </table>
+    <table class="info">
+        <center>
+            <tr>
+                <td><release></release></td><td>ms</td>
+                <td><density></density></td><td>n/s</td>
+                <td><notes></notes></td>
+            </tr>
+        </center>
+        <!-- <tr><td>release:&nbsp;</td><td><release></release></td><td>ms</td></td><td></td><td></td></tr>
+        <tr><td>density:&nbsp;</td><td><density></density></td><td>n/s</td></td><td>notes:&nbsp;</td><td><notes></notes></td></tr> -->
+    </table>
+  </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        var ws = null;
+        const eventLog = document.getElementById('eventLog')
+        var last_scr_time = [new Date(), new Date(), new Date(), new Date()];
+        var last_release = [-999, -999, -1, -1, -1, -1, -1, -1]; // 背景色を変更するために覚えておく
+
+        function init() {
+            open();
+        }
+        function open() {
+            if (ws == null){
+                var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim().replace(/['"]/g, '');
+                var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+                var ws_url = 'ws://' + host + ':' + port
+                console.log("WebSocket URL: "+ws_url)
+                ws = new WebSocket(ws_url);
+                ws.onmessage = onMessage;
+                ws.onclose = onClose;
+                //ws.onerror = onError;
+                //ws.onopen = onOpen;
+            }
+        }
+
+        function onMessage(event) {
+            var bg_keys_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-keys-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
+            var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
+            var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
+            var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
+            var threshold_release_low = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-low').trim());
+            var threshold_release_high = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-high').trim());
+            var outline_release_low = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-low').trim();
+            var outline_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-mid').trim();
+            var outline_release_high = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-high').trim();
+            var color_release_eachkey_low = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-low').trim();
+            var color_release_eachkey_mid = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-mid').trim();
+            var color_release_eachkey_high = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-high').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-eachkey').trim();
+            var release_eachkey_int = getComputedStyle(document.documentElement).getPropertyValue('--release-eachkey-int').trim();
+            var pushed_main = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed_main += ', 0 0 40px ' + bg_on_main
+            pushed_main += ', 0 0 20px ' + bg_on_main
+            pushed_main += ', 0 0 10px ' + bg_on_main
+            pushed_main += ', 0 0 40px ' + bg_on_main
+            pushed_main += ', 0 0 60px ' + bg_on_main
+            var pushed_sub = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed_sub += ', 0 0 40px ' + bg_on_sub
+            pushed_sub += ', 0 0 20px ' + bg_on_sub
+            pushed_sub += ', 0 0 10px ' + bg_on_sub
+            pushed_sub += ', 0 0 40px ' + bg_on_sub
+            pushed_sub += ', 0 0 60px ' + bg_on_sub
+            try {
+                const events = JSON.parse(event.data)
+                
+                // 単一イベントと配列の両方に対応
+                const processedEvents = Array.isArray(events) ? events : [events];
+                processedEvents.forEach(e => {
+                  $('warning').html('');
+                  if (e.type == 'button'){ //// 鍵盤
+                    var btn = e.button+1
+                    if (e.state == 'down'){
+                        if (btn>=6){
+                            $('#btn'+btn).css('box-shadow', pushed_sub)
+                            $('#btn'+btn).css('background', bg_on_sub)
+                        }else{
+                            $('#btn'+btn).css('box-shadow', pushed_main)
+                            $('#btn'+btn).css('background', bg_on_main)
+                        }
+                    }else{
+                        $('#btn'+btn).css('box-shadow', 'none')
+                        $('#btn'+btn).css('background', bg_keys_off)
+                    }
+                  }else if (e.type == 'axis'){ //// つまみ
+                    var direction = e.direction
+                    last_scr_time[e.pos] = new Date();
+                    if (e.value == 1){
+                        if (e.pos < 2){
+                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed_main)
+                            $('#'+e.axis+'-'+direction).css('background', bg_on_main)
+                        }else{
+                            $('#'+e.axis+'-'+direction).css('box-shadow', pushed_sub)
+                            $('#'+e.axis+'-'+direction).css('background', bg_on_sub)
+                        }
+                        $('#'+e.axis+'-'+(1-direction)).css('box-shadow', 'none')
+                        $('#'+e.axis+'-'+(1-direction)).css('background', bg_scratch_off)
+                    }else{
+                        $('.tumami'+direction).css('box-shadow', 'none')
+                        $('.tumami'+direction).css('background', bg_scratch_off)
+                    }
+                  }else if (e.type == 'release'){
+                    $('release').html(e.value)
+                  }else if (e.type == 'release_eachkey'){
+                    var btn = e.button+1
+                    last_release[btn] = Number(e.value)
+                    if (disp_release_each_key == 1){
+                        if (release_eachkey_int == 1){
+                            $('#btn'+btn).text(Math.round(e.value))
+                        }else{
+                            $('#btn'+btn).text(e.value)
+                        }
+                    }
+                    if (last_release[btn] <= threshold_release_low){
+                        $('#btn'+btn).css('outline', outline_release_low)
+                        $('#btn'+btn).css('color', color_release_eachkey_low)
+                    }else if (last_release[btn] <= threshold_release_high){
+                        $('#btn'+btn).css('outline', outline_release_mid)
+                        $('#btn'+btn).css('color', color_release_eachkey_mid)
+                    }else{
+                        $('#btn'+btn).css('outline', outline_release_high)
+                        $('#btn'+btn).css('color', color_release_eachkey_high)
+                    }
+                  }else if (e.type == 'density'){
+                    $('density').html(e.value)
+                  }else if (e.type == 'notes'){
+                    $('notes').html(e.value)
+                  }
+                })
+            } catch (e) {
+                console.error('データ解析エラー:', e)
+            }
+        }
+        function onClose(event) {
+            console.log('切断されました')
+            $('warning').html('Not Connected!!');
+            ws = null;
+            setTimeout("open()", 3000);
+        }
+
+        function formatEvent(event) {
+            const date = new Date().toLocaleTimeString()
+            if (event.type === 'button') {
+                return `[${date}] ボタン ${event.button}: ${event.state}`
+            }
+            if (event.type === 'axis') {
+                return `[${date}] 軸 ${event.axis}: ${event.value.toFixed(2)}`
+            }
+            return `[${date}] 不明なイベント`
+        }
+
+        function clearLog() {
+            eventLog.innerHTML = ''
+        }
+        
+        function stop_scratch() {
+            var bg_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-off').trim();
+            cur = new Date();
+            for (j=0; j<2; j++){
+                for (i=0; i<2; i++){
+                    if (cur-last_scr_time[j*2+i] > 200){
+                       $('#'+j+'-'+i).css('box-shadow', 'none')
+                       $('#'+j+'-'+i).css('background', bg_off)
+                    }
+                }
+            }
+        }
+
+        $(init);
+        const c_stop_scr = setInterval(stop_scratch, 200);
+    </script>
+</body>
+</html>

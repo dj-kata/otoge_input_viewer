@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>Otoge Input Viewer(IIDX 1P)</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="iidx.css" />
+    <link rel="stylesheet" type="text/css" href="scratch.css" />
+    <link rel="stylesheet" type="text/css" href="iidx_color.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
+</head>
+<body>
+    <!-- getElementByIdのために先にHTMLを書いておく必要がある -->
+    <div id="eventLog"></div>
+
+    <warning>Not Connected!!</warning>
+    <div class="background">
+        <div class="top">
+            <div class="container">
+                <div class="semicircle" id="semicircle">
+                    <div class="top-half"></div>
+                    <div class="bottom-half"></div>
+                </div>
+                <div class="scr0" id="innerIndicator"></div>
+                <div class="scr1" id="innerIndicator"></div>
+            </div>
+
+            <div class="grid-keys">
+                <div class="keys-row">
+                    <div id="btn2" class="btn"></div>
+                    <div id="btn4" class="btn"></div>
+                    <div id="btn6" class="btn"></div>
+
+                </div>
+                <div class="keys-row">
+                    <div id="btn1" class="btn"></div>
+                    <div id="btn3" class="btn"></div>
+                    <div id="btn5" class="btn"></div>
+                    <div id="btn7" class="btn"></div>
+
+                </div>
+            </div>
+        </div>
+        <div>
+            <table class="info">
+                <tr>
+                    <td><release></release></td><td>ms</td>
+                    <td><density></density></td><td>n/s</td>
+                    <td><notes></notes></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        var lr2mode = 0;
+        var ws = null;
+        const eventLog = document.getElementById('eventLog')
+        var last_scr_time = [new Date(), new Date()];
+        var last_release = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]; // 背景色を変更するために覚えておく
+        const semicircle = document.getElementById('semicircle');
+        let isRotating = false;
+        let currentDirection = null;
+        let currentAngle = 0;
+        let rotationInterval = null;
+        // 回転設定
+        const ROTATION_INTERVAL = 20; // 16ms間隔（約60FPS）
+        const ANGLE_INCREMENT = -3; // 1回のインターバルで3度回転（約180度/秒）
+
+        function init() {
+            open();
+        }
+        function open() {
+            if (ws == null){
+                var host = getComputedStyle(document.documentElement).getPropertyValue('--host').trim().replace(/['"]/g, '');
+                var port = getComputedStyle(document.documentElement).getPropertyValue('--port').trim();
+                var ws_url = 'ws://' + host + ':' + port
+                console.log("WebSocket URL: "+ws_url)
+                ws = new WebSocket(ws_url);
+                ws.onmessage = onMessage;
+                ws.onclose = onClose;
+                //ws.onerror = onError;
+                //ws.onopen = onOpen;
+            }
+        }
+
+        function setRotation(angle) {
+            semicircle.style.transform = `rotate(${angle}deg)`;
+            currentAngle = angle;
+            //updateAngleDisplay();
+        }
+
+        function rotationStep() {
+            if (!isRotating) return;
+            
+            // 角度を増減
+            if (currentDirection === 'right') {
+                currentAngle += ANGLE_INCREMENT;
+            } else if (currentDirection === 'left') {
+                currentAngle -= ANGLE_INCREMENT;
+            }
+            
+            // 回転を適用
+            semicircle.style.transform = `rotate(${currentAngle}deg)`;
+            //updateAngleDisplay();
+        }
+
+        function startRotation(direction) {
+            // 既に同じ方向に回転中の場合は何もしない
+            if (isRotating && currentDirection === direction) {
+                return;
+            }
+
+            // 既存の回転を停止
+            stopRotation();
+            
+            currentDirection = direction;
+            isRotating = true;
+
+            // インターバルを開始
+            rotationInterval = setInterval(rotationStep, ROTATION_INTERVAL);
+        }
+
+        function stopRotation() {
+            if (rotationInterval) {
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+            }
+            
+            isRotating = false;
+            currentDirection = null;
+        }
+
+        function resetAngle() {
+            stopRotation();
+            setRotation(0);
+        }
+
+        function onMessage(event) {
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
+            var bg_keys_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-keys-off').trim();
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
+            var bg_on_inner = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-inner').trim();
+            var bg_on_main = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-main').trim();
+            //var bg_on_main = 'color-mix(in srgb, '+color_main+' 80%, transparent)'; // OBS未対応。。
+            var bg_on_sub = getComputedStyle(document.documentElement).getPropertyValue('--bg-on-sub').trim();
+            var threshold_release_low = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-low').trim());
+            var threshold_release_high = Number(getComputedStyle(document.documentElement).getPropertyValue('--threshold-release-high').trim());
+            var outline_release_low = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-low').trim();
+            var outline_release_mid = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-mid').trim();
+            var outline_release_high = getComputedStyle(document.documentElement).getPropertyValue('--outline-release-high').trim();
+            var color_release_eachkey_low = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-low').trim();
+            var color_release_eachkey_mid = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-mid').trim();
+            var color_release_eachkey_high = getComputedStyle(document.documentElement).getPropertyValue('--color-release-eachkey-high').trim();
+            var disp_release_each_key = getComputedStyle(document.documentElement).getPropertyValue('--disp-release-eachkey').trim();
+            var release_eachkey_int = getComputedStyle(document.documentElement).getPropertyValue('--release-eachkey-int').trim();
+            var pushed = "0 0 10px "+bg_on_inner+", 0 0 10px "+bg_on_inner+", 0 0 20px "+bg_on_inner
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 20px ' + bg_on_main
+            pushed += ', 0 0 10px ' + bg_on_main
+            pushed += ', 0 0 40px ' + bg_on_main
+            pushed += ', 0 0 60px ' + bg_on_main
+            try {
+                const events = JSON.parse(event.data)
+                
+                // 単一イベントと配列の両方に対応
+                const processedEvents = Array.isArray(events) ? events : [events];
+                processedEvents.forEach(e => {
+                  $('warning').html('');
+                  if (e.type == 'button'){ //// 鍵盤
+                    var btn = e.button+1
+                    if (e.state == 'down'){
+                        $('#btn'+btn).css('box-shadow', pushed)
+                        $('#btn'+btn).css('background', bg_on_main)
+                    }else{
+                        $('#btn'+btn).css('box-shadow', 'none')
+                        $('#btn'+btn).css('background', bg_keys_off)
+                    }
+                  }else if (e.type == 'axis'){ //// 皿
+                    var direction = ""
+                    var direction_other = "" // 逆側
+
+                    direction = 1-e.pos
+                    last_scr_time[direction] = new Date();
+                    if (lr2mode == 0) {
+                        if (e.value == 1){
+                            $('.scr'+direction).css('box-shadow', pushed)
+                            $('.scr'+direction).css('background', bg_on_main)
+                            $('.scr'+(1-direction)).css('box-shadow', 'none')
+                            $('.scr'+(1-direction)).css('background', bg_scratch_off)
+                        }else{
+                            $('.scr'+direction).css('box-shadow', 'none')
+                            $('.scr'+direction).css('background', bg_scratch_off)
+                        }
+                        if (e.value == 1){
+                            if (direction==0){
+                                startRotation('right')
+                            }else{
+                                startRotation('left')
+                            }
+                        }else{
+                            stopRotation()
+                        }
+                    }else{ // lr2mode
+                        if (e.value_org <0){
+                            startRotation('right')
+                            $('.scr0').css('box-shadow', pushed)
+                            $('.scr0').css('background', bg_on_main)
+                            $('.scr1').css('box-shadow', 'none')
+                            $('.scr1').css('background', bg_scratch_off)
+                        }
+                        else if (e.value_org > 0){
+                            startRotation('left')
+                            $('.scr1').css('box-shadow', pushed)
+                            $('.scr1').css('background', bg_on_main)
+                            $('.scr0').css('box-shadow', 'none')
+                            $('.scr0').css('background', bg_scratch_off)
+                        }else{
+                            stopRotation()
+                            $('.scr0').css('box-shadow', 'none')
+                            $('.scr0').css('background', bg_scratch_off)
+                            $('.scr1').css('box-shadow', 'none')
+                            $('.scr1').css('background', bg_scratch_off)
+                        }
+                    }
+                  }else if (e.type == 'release'){
+                    $('release').html(e.value)
+                  }else if (e.type == 'release_eachkey'){
+                    var btn = e.button+1
+                    last_release[btn] = Number(e.value)
+                    if (disp_release_each_key == 1){
+                        var btn = e.button+1
+                        if (release_eachkey_int == 1){
+                            $('#btn'+btn).text(Math.round(e.value))
+                        }else{
+                            $('#btn'+btn).text(e.value)
+                        }
+                    }
+                    if (last_release[btn] <= threshold_release_low){
+                        $('#btn'+btn).css('outline', outline_release_low)
+                        $('#btn'+btn).css('color', color_release_eachkey_low)
+                    }else if (last_release[btn] <= threshold_release_high){
+                        $('#btn'+btn).css('outline', outline_release_mid)
+                        $('#btn'+btn).css('color', color_release_eachkey_mid)
+                    }else{
+                        $('#btn'+btn).css('outline', outline_release_high)
+                        $('#btn'+btn).css('color', color_release_eachkey_high)
+                    }
+                  }else if (e.type == 'density'){
+                    $('density').html(e.value)
+                  }else if (e.type == 'notes'){
+                    $('notes').html(e.value)
+                  }
+                })
+            } catch (e) {
+                console.error('データ解析エラー:', e)
+            }
+        }
+        function onClose(event) {
+            console.log('切断されました')
+            $('warning').html('Not Connected!!');
+            ws = null;
+            setTimeout("open()", 3000);
+        }
+
+        function formatEvent(event) {
+            const date = new Date().toLocaleTimeString()
+            if (event.type === 'button') {
+                return `[${date}] ボタン ${event.button}: ${event.state}`
+            }
+            if (event.type === 'axis') {
+                return `[${date}] 軸 ${event.axis}: ${event.value.toFixed(2)}`
+            }
+            return `[${date}] 不明なイベント`
+        }
+
+        function clearLog() {
+            eventLog.innerHTML = ''
+        }
+        
+        function stop_scratch() {
+            var bg_scratch_off = getComputedStyle(document.documentElement).getPropertyValue('--bg-scratch-off').trim();
+            lr2mode = getComputedStyle(document.documentElement).getPropertyValue('--scratch-left-lr2-mode').trim();
+            cur = new Date();
+            if (lr2mode==0){
+                for (i=0; i<2; i++){
+                     if (cur-last_scr_time[i] > 150){
+                        stopRotation()
+                        $('.scr'+i).css('box-shadow', 'none')
+                        $('.scr'+i).css('background', bg_scratch_off)
+                     }
+                }
+            }
+        }
+
+        $(init);
+        const c_stop_scr = setInterval(stop_scratch, 200);
+    </script>
+</body>
+</html>
