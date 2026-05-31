@@ -47,9 +47,9 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 |html/iidx_2p.html|700×400|IIDX 2P側|
 |html/iidx_dp.html|1400×400|IIDX DP|
 |html/sdvx.html|870×430|SDVX|
-|html/iidx_1p_color.html|700×400|IIDX 1P側、リリースタイム色分け表示|
-|html/iidx_2p_color.html|700×400|IIDX 2P側、リリースタイム色分け表示|
-|html/iidx_dp_color.html|1400×400|IIDX DP、リリースタイム色分け表示|
+|html/iidx_1p_color.html|600×370|IIDX 1P側、リリースタイム色分け表示|
+|html/iidx_2p_color.html|600×370|IIDX 2P側、リリースタイム色分け表示|
+|html/iidx_dp_color.html|1200×370|IIDX DP、リリースタイム色分け表示|
 |html/sdvx_color.html|870×430|SDVX、リリースタイム色分け表示|
 |html/stats_only.html|800×100|(リリース、密度、ノーツ数の数値のみ)|
 
