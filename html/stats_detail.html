@@ -110,7 +110,7 @@
         .meter {
             display: grid;
             grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
-            gap: 2px;
+            gap: 1px;
             width: 100%;
             height: 18px;
             padding: 2px;
@@ -214,14 +214,15 @@
     <script>
         let ws = null;
         const meterConfigs = {
-            release: { segments: 12, max: 120 },
-            density: { segments: 10, max: 50 }
+            release: { segments: 20, max: 100 },
+            density: { segments: 20, max: 50 }
         };
 
         function bandColor(kind, value) {
             if (kind === 'release') {
-                if (value <= 60) return '#4ddf8b';
-                if (value < 80) return '#e6d94f';
+                if (value <= 40) return '#4ddf8b';
+                if (value <= 60) return '#e6d94f';
+                if (value <= 80) return '#ffad42';
                 return '#ff5b64';
             }
             if (value <= 20) return '#4ddf8b';
