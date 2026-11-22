@@ -74,6 +74,10 @@
             background: rgba(10, 17, 32, 0.76);
         }
 
+        .stat-row.has-meter {
+            grid-template-columns: 58px 108px minmax(0, 1fr) 38px;
+        }
+
         .stat-row::before {
             content: "";
             position: absolute;
@@ -96,11 +100,35 @@
 
         .value {
             justify-self: end;
-            color: var(--accent);
+            color: var(--value-color, var(--accent));
             font-size: 28px;
             font-weight: 800;
             line-height: 1;
-            text-shadow: 0 0 4px var(--glow);
+            text-shadow: 0 0 3px var(--value-glow, var(--glow));
+        }
+
+        .meter {
+            display: grid;
+            grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
+            gap: 2px;
+            width: 100%;
+            height: 18px;
+            padding: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.2);
+            transition: opacity 0.15s;
+        }
+
+        .meter.hidden {
+            opacity: 0;
+        }
+
+        .meter-segment {
+            min-width: 0;
+            border-radius: 1px;
+            background: rgba(110, 125, 154, 0.13);
+            transition: background-color 0.08s, box-shadow 0.08s;
         }
 
         .unit {
@@ -154,13 +182,15 @@
     <main class="panel" id="panel">
         <span class="status-dot"></span>
         <section class="rows">
-            <div class="stat-row release-row">
+            <div class="stat-row release-row has-meter">
                 <span class="label-main">RELEASE</span>
+                <span class="meter hidden" id="release-meter" aria-hidden="true"></span>
                 <span class="value" id="release">--</span>
                 <span class="unit">ms</span>
             </div>
-            <div class="stat-row density-row">
+            <div class="stat-row density-row has-meter">
                 <span class="label-main">DENSITY</span>
+                <span class="meter hidden" id="density-meter" aria-hidden="true"></span>
                 <span class="value" id="density">--</span>
                 <span class="unit">n/s</span>
             </div>
@@ -183,6 +213,63 @@
 
     <script>
         let ws = null;
+        const meterConfigs = {
+            release: { segments: 12, max: 120 },
+            density: { segments: 10, max: 50 }
+        };
+
+        function bandColor(kind, value) {
+            if (kind === 'release') {
+                if (value <= 60) return '#4ddf8b';
+                if (value < 80) return '#e6d94f';
+                return '#ff5b64';
+            }
+            if (value <= 20) return '#4ddf8b';
+            if (value <= 30) return '#cddd4d';
+            if (value < 40) return '#ffad42';
+            return '#ff5b64';
+        }
+
+        function initializeMeters() {
+            Object.entries(meterConfigs).forEach(([kind, config]) => {
+                const meter = document.getElementById(`${kind}-meter`);
+                meter.style.setProperty('--segment-count', config.segments);
+                for (let index = 0; index < config.segments; index++) {
+                    const segment = document.createElement('span');
+                    segment.className = 'meter-segment';
+                    meter.appendChild(segment);
+                }
+            });
+        }
+
+        function updateMeter(kind, rawValue) {
+            const value = Number(rawValue);
+            const config = meterConfigs[kind];
+            const meter = document.getElementById(`${kind}-meter`);
+            const valueElement = document.getElementById(kind);
+            const hasValue = Number.isFinite(value) && value > 0;
+            meter.classList.toggle('hidden', !hasValue);
+
+            if (!Number.isFinite(value)) return;
+            const currentColor = bandColor(kind, value);
+            valueElement.style.setProperty('--value-color', currentColor);
+            valueElement.style.setProperty('--value-glow', `${currentColor}38`);
+
+            const activeCount = hasValue
+                ? Math.min(config.segments, Math.ceil(value / config.max * config.segments))
+                : 0;
+            Array.from(meter.children).forEach((segment, index) => {
+                if (index < activeCount) {
+                    const segmentValue = (index + 1) * config.max / config.segments;
+                    const color = bandColor(kind, segmentValue);
+                    segment.style.backgroundColor = color;
+                    segment.style.boxShadow = `0 0 2px ${color}66`;
+                } else {
+                    segment.style.backgroundColor = 'rgba(110, 125, 154, 0.13)';
+                    segment.style.boxShadow = 'none';
+                }
+            });
+        }
 
         function numberText(value) {
             const number = Number(value);
@@ -206,8 +293,10 @@
             events.forEach(item => {
                 if (item.type === 'release') {
                     document.getElementById('release').textContent = item.value;
+                    updateMeter('release', item.value);
                 } else if (item.type === 'density') {
                     document.getElementById('density').textContent = item.value;
+                    updateMeter('density', item.value);
                 } else if (item.type === 'notes') {
                     document.getElementById('notes').textContent = numberText(item.value);
                     if (item.key !== undefined) {
@@ -238,6 +327,7 @@
             };
         }
 
+        initializeMeters();
         connect();
     </script>
 </body>
