@@ -24,9 +24,12 @@ from src.key_config import (
 )
 from src.update import GitHubUpdater
 from src.count_history import CountHistory
+from src.html_catalog import HtmlCatalogWindow
+from src.html_server import create_html_server
 import traceback
 import urllib
 import webbrowser
+from pathlib import Path
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
@@ -68,6 +71,7 @@ class JoystickWebSocketServer(QMainWindow):
     button_enabled_requested = Signal(object, bool)
     counter_update_requested = Signal()
     key_config_event_received = Signal(dict)
+    server_error_requested = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -77,6 +81,7 @@ class JoystickWebSocketServer(QMainWindow):
         self.label_update_requested.connect(self.set_label_text)
         self.button_enabled_requested.connect(self.set_button_enabled)
         self.counter_update_requested.connect(self.update_counter_display)
+        self.server_error_requested.connect(self.show_server_error)
         self.scratch_queue = Queue()  # スクラッチだけoff用処理も入れるため分ける
         self.calc_queue = Queue()  # 計算用のキュー、全イベントをここに流す
         self.event_queue = Queue()  # HTMLへの出力をすべてここに通す
@@ -104,12 +109,22 @@ class JoystickWebSocketServer(QMainWindow):
             self.get_async_key_state = ctypes.windll.user32.GetAsyncKeyState
         self.list_density = []
         self.settings = Settings()
+        self.application_dir = (
+            Path(sys.executable).resolve().parent
+            if getattr(sys, "frozen", False)
+            else Path(__file__).resolve().parent
+        )
+        self.html_dir = self.application_dir / "html"
+        self.html_server = None
+        self.html_server_thread = None
+        self.html_server_port = self.settings.port + 1
         self.count_history = CountHistory()
         self.load_count_log_state()
         logger.debug(f"settings = {self.settings.__dict__}")
 
         self.joystick = [None, None]
         self.key_config_dialog = None
+        self.html_catalog_window = None
 
         self.move(self.settings.lx, self.settings.ly)
 
@@ -253,6 +268,9 @@ class JoystickWebSocketServer(QMainWindow):
             QAction("reset counter", self, triggered=self.reset_counter)
         )
         settings_menu.addAction(QAction("tweet", self, triggered=self.tweet))
+        self.menuBar().addAction(
+            QAction("OBSに表示", self, triggered=self.open_html_catalog)
+        )
 
         central = QWidget(self)
         layout = QVBoxLayout(central)
@@ -315,6 +333,10 @@ class JoystickWebSocketServer(QMainWindow):
     def set_button_enabled(self, button, enabled):
         button.setEnabled(enabled)
 
+    def show_server_error(self, message):
+        self.set_label_text(self.server_status, message, "red")
+        QMessageBox.critical(self, "WebSocketサーバーエラー", message)
+
     def start_monitor(self):
         # ジョイパッド監視スレッド
         self.joystick_thread = threading.Thread(target=self.monitor_thread, daemon=True)
@@ -323,6 +345,7 @@ class JoystickWebSocketServer(QMainWindow):
     def start_threads(self):
         """スレッドの起動処理"""
         self.running = True
+        self.start_html_server()
         # WebSocketサーバースレッド（初期状態では非起動）
         self.server_thread = threading.Thread(
             target=self.run_websocket_server, daemon=True
@@ -346,6 +369,7 @@ class JoystickWebSocketServer(QMainWindow):
         # 時計更新用スレッド
         self.uptime_thread = threading.Thread(target=self.thread_uptime, daemon=True)
         self.uptime_thread.start()
+        self.update_server_status_display()
 
     def open_settings_dialog(self):
         """設定ウィンドウを開く"""
@@ -385,6 +409,21 @@ class JoystickWebSocketServer(QMainWindow):
         dialog.exec()
         self.key_config_dialog = None
         self.settings.load()
+
+    def open_html_catalog(self):
+        """OBSへドラッグできるHTMLビューのカタログを開く。"""
+        if (
+            self.html_catalog_window is None
+            or self.html_catalog_window.server_port != self.html_server_port
+        ):
+            if self.html_catalog_window is not None:
+                self.html_catalog_window.close()
+            self.html_catalog_window = HtmlCatalogWindow(
+                self.html_dir, self.html_server_port, self
+            )
+        self.html_catalog_window.show()
+        self.html_catalog_window.raise_()
+        self.html_catalog_window.activateWindow()
 
     def change_joystick(self, controller_pos: int):
         """検出するジョイパッドを変更する
@@ -1118,10 +1157,13 @@ class JoystickWebSocketServer(QMainWindow):
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
         try:
+            await websocket.send(
+                json.dumps([{"type": "notes", "value": self.today_notes}])
+            )
             async for message in websocket:
                 pass
         finally:
-            self.clients.remove(websocket)
+            self.clients.discard(websocket)
 
     async def send_joystick_events(self):
         while self.running:
@@ -1136,22 +1178,29 @@ class JoystickWebSocketServer(QMainWindow):
                     try:
                         await client.send(message)
                     except:
-                        self.clients.remove(client)
+                        self.clients.discard(client)
             await asyncio.sleep(0.001)  # 送信間隔調整
-
-    async def main_server(self):
-        async with websockets.serve(self.websocket_handler, "0.0.0.0", 8765):
-            await self.send_joystick_events()
 
     def run_websocket_server(self):
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.loop = asyncio.get_event_loop()
-        self.loop.run_until_complete(self.main_server())
+        try:
+            self.loop.run_until_complete(self.main_server())
+        except OSError as error:
+            logger.exception("WebSocket server failed")
+            self.server_error_requested.emit(
+                f"WebSocketポート {self.settings.port} を使用できません。\n"
+                "別のOtoge Input Viewerが起動していないか確認してください。\n\n"
+                f"詳細: {error}"
+            )
+        finally:
+            self.loop.close()
 
     def update_server_status_display(self):
         status_text = "停止中" if not self.running else "稼働中"
         self.server_status.setText(
-            f"WebSocket: {status_text} (ポート: {self.settings.port})"
+            f"WebSocket: {status_text} (ポート: {self.settings.port}) / "
+            f"HTML: {self.html_server_port}"
         )
         self.mode_label.setText(f"mode: {self.settings.playmode.name}")
 
@@ -1166,9 +1215,47 @@ class JoystickWebSocketServer(QMainWindow):
 
     async def main_server(self):
         async with websockets.serve(
-            self.websocket_handler, "0.0.0.0", self.settings.port
+            self.websocket_handler,
+            "0.0.0.0",
+            self.settings.port,
         ):
             await self.send_joystick_events()
+
+    def start_html_server(self):
+        self.stop_html_server()
+        self.html_server = None
+        for port in range(
+            self.settings.port + 1, min(self.settings.port + 11, 65536)
+        ):
+            try:
+                self.html_server = create_html_server(self.html_dir, port)
+            except OSError as error:
+                logger.warning(f"HTML server port {port} unavailable: {error}")
+                continue
+            self.html_server_port = port
+            break
+        if self.html_server is None:
+            raise OSError("HTML配信用の空きポートを確保できませんでした。")
+        if (
+            self.html_catalog_window is not None
+            and self.html_catalog_window.server_port != self.html_server_port
+        ):
+            self.html_catalog_window.close()
+            self.html_catalog_window = None
+        self.html_server_thread = threading.Thread(
+            target=self.html_server.serve_forever, daemon=True
+        )
+        self.html_server_thread.start()
+
+    def stop_html_server(self):
+        if self.html_server is None:
+            return
+        self.html_server.shutdown()
+        self.html_server.server_close()
+        if self.html_server_thread is not None:
+            self.html_server_thread.join(timeout=2)
+        self.html_server = None
+        self.html_server_thread = None
 
     def toggle_server(self):
         logger.debug("")
@@ -1176,12 +1263,9 @@ class JoystickWebSocketServer(QMainWindow):
             self.running = False
             self.server_thread.join()
             self.update_server_status_display()
-            self.loop.stop()
-            while self.loop.is_running():
-                time.sleep(0.3)
-            self.loop.close()
 
         self.running = True
+        self.start_html_server()
         self.server_thread = threading.Thread(
             target=self.run_websocket_server, daemon=True
         )
@@ -1238,6 +1322,7 @@ class JoystickWebSocketServer(QMainWindow):
         """メインウィンドウ終了時に実行される関数"""
         logger.debug("exit")
         self.running = False
+        self.stop_html_server()
         if self.settings.auto_tweet_on_exit:
             self.tweet()
         self.save_count_history()

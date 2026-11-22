@@ -150,7 +150,10 @@ class SettingsDialog(QDialog):
         form.addRow("譜面密度計算周期(s) (default=0.5)", self.density_interval_entry)
 
         self.port_entry = QLineEdit()
-        self.port_entry.setToolTip('変更する場合、本設定ダイアログを閉じた後に\nOBS側でブラウザソースのプロパティから\n"現在のページのキャッシュを更新"をクリックしてください。')
+        self.port_entry.setToolTip(
+            "変更後は、カタログから追加したOBSブラウザソースを削除し、\n"
+            "新しいポートで再度D&Dしてください。"
+        )
         form.addRow("WebSocketポート: (default=8765)", self.port_entry)
 
         self.debug_mode_check = QCheckBox('debug_mode (default=off)')

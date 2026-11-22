@@ -4,7 +4,7 @@ project_name=otoge_input_viewer
 build_stamp=$(project_name)/.built
 target_zip=$(project_name).zip
 srcs=$(wildcard *.py) $(wildcard *.pyw) $(wildcard src/*.py) src/icon.ico
-html_files=$(wildcard html/*.*)
+html_files=$(shell find html -type f)
 ZIP ?= 7z a -tzip -mx=1 -mmt=on
 
 .PHONY: all build zip dist clean test

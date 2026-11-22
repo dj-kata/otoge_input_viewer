@@ -17,7 +17,7 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 1. [Releaseページ](https://github.com/dj-kata/otoge_input_viewer/releases)の一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
 2. otoge_input_viewer.exeを実行する。
 3. 検出するコントローラを変更したい場合は```changeボタン```を押す
-4. OBSにキー入力状況を表示したい場合は、同梱のHTMLファイル(htmlフォルダ内)をOBSにドラッグ&ドロップする。
+4. OBSにキー入力状況を表示したい場合は、メニューバーの「OBSに表示」を開き、使いたいビューの「ここをOBSへD&D」をOBSのプレビュー画面へドラッグ&ドロップする。
 5. SDVXで使いたい場合やリリース計算に使うノーツ数を変更したい場合は設定画面(```メニューバー内config```)から設定を変更してください。
 
 メイン画面において、使いたいコントローラの名前が表示されていてかつ、modeが正しければOKです。  
@@ -52,10 +52,19 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 |html/iidx_dp_color.html|1200×370|IIDX DP、リリースタイム色分け表示|
 |html/sdvx_color.html|870×430|SDVX、リリースタイム色分け表示|
 |html/stats_only.html|800×100|(リリース、密度、ノーツ数の数値のみ)|
+|html/scratch_speed.html|610×300|スクラッチの入力間隔をグラフ表示|
+
+メニューバーの「OBSに表示」では、各HTMLのサムネイルと推奨サイズを一覧で確認できます。
+「ここをOBSへD&D」と書かれた部分をOBSのプレビュー画面へドラッグすると、ブラウザソースとして追加されます。
+この方法で追加したブラウザソースには、一覧に表示された推奨サイズが自動的に設定されます。
+OBSでURL追加の確認画面が表示された場合は「はい」を選択してください。
+HTML配信にはWebSocketポートの次の空きポートを使用し、現在の番号はメイン画面に表示されます。
+OBSだけを管理者権限で実行している場合はドラッグ&ドロップできないことがあるため、その場合は本ツールとOBSを同じ権限で起動してください。
+複数のOtoge Input Viewerを同時に起動するとWebSocketポートが競合するため、必ず1つだけ起動してください。
 
 WebSocketのポート番号はデフォルトの8765で問題ないつもりですが、
 もし上手く動かない場合(他のアプリが掴んでいる等)は、他のポートに変更してみてください。
-変更後はブラウザソースの再読み込みが必要です。(該当するブラウザソースをダブルクリックし、```現在のページのキャッシュを更新```をクリック)
+変更後は、カタログから追加したOBSブラウザソースを削除し、新しいポートで再度D&Dしてください。
 
 メニューバーの`key config`からキーコンフィグを手動で行うこともできます。  
 PHOENIX WANやFAUCE TWOではこの設定は不要ですが、  
