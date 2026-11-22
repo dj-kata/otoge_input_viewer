@@ -30,6 +30,11 @@ table.info {
     table-layout: auto;
 }
 
+/* DPでは横幅に合わせて各項目が離れすぎないよう、統計情報を左側へまとめる。 */
+table.info.info-left {
+    width: auto;
+}
+
 .btn {
     width: 50px;
     height: 85px;
