@@ -78,6 +78,18 @@
             grid-template-columns: 58px 108px minmax(0, 1fr) 38px;
         }
 
+        html.labels-hidden .label-main {
+            display: none;
+        }
+
+        html.labels-hidden .stat-row.has-meter {
+            grid-template-columns: 108px minmax(0, 1fr) 38px;
+        }
+
+        html.labels-hidden .notes-row {
+            grid-template-columns: minmax(0, 1fr) 104px;
+        }
+
         .stat-row::before {
             content: "";
             position: absolute;
@@ -328,6 +340,8 @@
             };
         }
 
+        const showLabels = new URLSearchParams(window.location.search).get('show-labels') !== '0';
+        document.documentElement.classList.toggle('labels-hidden', !showLabels);
         initializeMeters();
         connect();
     </script>

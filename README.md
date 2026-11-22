@@ -52,7 +52,7 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 |html/iidx_dp_color.html|1200×370|IIDX DP、リリースタイム色分け表示|
 |html/sdvx_color.html|870×430|SDVX、リリースタイム色分け表示|
 |html/stats_only.html|800×100|統計情報のみ(1行)|
-|html/stats_detail.html|400×180|統計情報のみ（詳細、key・scr/vol内訳付き）|
+|html/stats_detail.html|400×180（項目名なし: 340×180）|統計情報のみ（詳細、key・scr/vol内訳付き）|
 |html/scratch_speed.html|610×300|スクラッチの入力間隔をグラフ表示|
 
 メニューバーの「OBSに表示」では、各HTMLのサムネイルと推奨サイズを一覧で確認できます。

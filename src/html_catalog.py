@@ -5,9 +5,12 @@ from PySide6.QtCore import QMimeData, QPoint, QSize, Qt, QUrl, QUrlQuery
 from PySide6.QtGui import QDrag, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
+    QRadioButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -21,10 +24,21 @@ class HtmlView:
     description: str
     width: int
     height: int
+    width_without_labels: int | None = None
 
     @property
     def thumbnail_filename(self) -> str:
         return f"{Path(self.filename).stem}.png"
+
+    def thumbnail_filename_for(self, show_labels: bool) -> str:
+        if self.width_without_labels is not None and not show_labels:
+            return f"{Path(self.filename).stem}_no_labels.png"
+        return self.thumbnail_filename
+
+    def width_for(self, show_labels: bool) -> int:
+        if self.width_without_labels is not None and not show_labels:
+            return self.width_without_labels
+        return self.width
 
 
 HTML_VIEWS = (
@@ -73,6 +87,7 @@ HTML_VIEWS = (
         "平均値と合計打鍵数の内訳を複数行で表示",
         400,
         180,
+        340,
     ),
     HtmlView(
         "scratch_speed.html",
@@ -84,12 +99,16 @@ HTML_VIEWS = (
 )
 
 
-def build_obs_source_url(view: HtmlView, server_port: int) -> QUrl:
+def build_obs_source_url(
+    view: HtmlView, server_port: int, show_labels: bool = True
+) -> QUrl:
     source_url = QUrl(f"http://127.0.0.1:{server_port}/{view.filename}")
     query = QUrlQuery()
     query.addQueryItem("layer-name", view.title)
-    query.addQueryItem("layer-width", str(view.width))
+    query.addQueryItem("layer-width", str(view.width_for(show_labels)))
     query.addQueryItem("layer-height", str(view.height))
+    if view.width_without_labels is not None:
+        query.addQueryItem("show-labels", "1" if show_labels else "0")
     source_url.setQuery(query)
     return source_url
 
@@ -117,6 +136,10 @@ class HtmlDragLabel(QLabel):
             "}"
             "QLabel:hover { background: #214a78; }"
         )
+
+    def set_source(self, source_url: QUrl, drag_pixmap: QPixmap):
+        self.source_url = source_url
+        self.drag_pixmap = drag_pixmap
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -163,29 +186,22 @@ class HtmlViewCard(QFrame):
             "  background: #252525;"
             "}"
             "QLabel { border: none; background: transparent; color: #eeeeee; }"
+            "QRadioButton { border: none; color: #eeeeee; }"
         )
+        self.view = view
+        self.html_dir = html_dir
+        self.server_port = server_port
+        self.show_labels = True
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(7)
 
-        thumbnail_path = html_dir / "thumbnails" / view.thumbnail_filename
-        pixmap = QPixmap(str(thumbnail_path))
-        thumbnail = QLabel()
-        thumbnail.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        thumbnail.setFixedSize(400, 220)
-        thumbnail.setStyleSheet("background: #111; border-radius: 5px;")
-        if pixmap.isNull():
-            thumbnail.setText("プレビューなし")
-        else:
-            thumbnail.setPixmap(
-                pixmap.scaled(
-                    thumbnail.size(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-            )
-        layout.addWidget(thumbnail)
+        self.thumbnail = QLabel()
+        self.thumbnail.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.thumbnail.setFixedSize(400, 220)
+        self.thumbnail.setStyleSheet("background: #111; border-radius: 5px;")
+        layout.addWidget(self.thumbnail)
 
         title = QLabel(view.title)
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -195,12 +211,58 @@ class HtmlViewCard(QFrame):
         description.setStyleSheet("color: #cccccc;")
         layout.addWidget(description)
 
-        size = QLabel(f"推奨サイズ: {view.width} × {view.height}")
-        size.setStyleSheet("color: #a9cfff;")
-        layout.addWidget(size)
+        if view.width_without_labels is not None:
+            options = QWidget()
+            options_layout = QHBoxLayout(options)
+            options_layout.setContentsMargins(0, 0, 0, 0)
+            options_layout.setSpacing(12)
+            options_layout.addWidget(QLabel("項目名:"))
+            self.labels_on_radio = QRadioButton("表示")
+            self.labels_off_radio = QRadioButton("非表示")
+            self.labels_on_radio.setChecked(True)
+            self.label_button_group = QButtonGroup(self)
+            self.label_button_group.addButton(self.labels_on_radio)
+            self.label_button_group.addButton(self.labels_off_radio)
+            options_layout.addWidget(self.labels_on_radio)
+            options_layout.addWidget(self.labels_off_radio)
+            options_layout.addStretch()
+            layout.addWidget(options)
 
-        layout.addWidget(
-            HtmlDragLabel(build_obs_source_url(view, server_port), pixmap, self)
+        self.size_label = QLabel()
+        self.size_label.setStyleSheet("color: #a9cfff;")
+        layout.addWidget(self.size_label)
+
+        self.drag_label = HtmlDragLabel(QUrl(), QPixmap(), self)
+        layout.addWidget(self.drag_label)
+
+        self.update_variant(True)
+
+        if view.width_without_labels is not None:
+            self.labels_on_radio.toggled.connect(self.update_variant)
+
+    def update_variant(self, show_labels: bool):
+        self.show_labels = show_labels
+        thumbnail_path = (
+            self.html_dir
+            / "thumbnails"
+            / self.view.thumbnail_filename_for(show_labels)
+        )
+        pixmap = QPixmap(str(thumbnail_path))
+        self.thumbnail.clear()
+        if pixmap.isNull():
+            self.thumbnail.setText("プレビューなし")
+        else:
+            self.thumbnail.setPixmap(
+                pixmap.scaled(
+                    self.thumbnail.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        width = self.view.width_for(show_labels)
+        self.size_label.setText(f"推奨サイズ: {width} × {self.view.height}")
+        self.drag_label.set_source(
+            build_obs_source_url(self.view, self.server_port, show_labels), pixmap
         )
 
 
