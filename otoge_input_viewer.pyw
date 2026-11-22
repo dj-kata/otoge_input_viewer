@@ -281,7 +281,7 @@ class JoystickWebSocketServer(QMainWindow):
         )
         settings_menu.addAction(QAction("tweet", self, triggered=self.tweet))
         self.menuBar().addAction(
-            QAction("OBSに表示", self, triggered=self.open_html_catalog)
+            QAction("OBS用テンプレート", self, triggered=self.open_html_catalog)
         )
 
         central = QWidget(self)

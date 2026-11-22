@@ -270,7 +270,7 @@ class HtmlCatalogWindow(QWidget):
     def __init__(self, html_dir: Path, server_port: int, parent=None):
         super().__init__(parent, Qt.WindowType.Window)
         self.server_port = server_port
-        self.setWindowTitle("OBSに表示 - HTMLカタログ")
+        self.setWindowTitle("OBS用テンプレート - HTMLカタログ")
         self.resize(920, 720)
         self.setMinimumSize(500, 420)
 

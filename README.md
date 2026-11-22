@@ -17,7 +17,7 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 1. [Releaseページ](https://github.com/dj-kata/otoge_input_viewer/releases)の一番上にあるotoge_input_viewer.zipをダウンロードして解凍する。
 2. otoge_input_viewer.exeを実行する。
 3. 検出するコントローラを変更したい場合は```changeボタン```を押す
-4. OBSにキー入力状況を表示したい場合は、メニューバーの「OBSに表示」を開き、使いたいビューの「ここをOBSへD&D」をOBSのプレビュー画面へドラッグ&ドロップする。
+4. OBSにキー入力状況を表示したい場合は、メニューバーの「OBS用テンプレート」を開き、使いたいビューの「ここをOBSへD&D」をOBSのプレビュー画面へドラッグ&ドロップする。
 5. SDVXで使いたい場合やリリース計算に使うノーツ数を変更したい場合は設定画面(```メニューバー内config```)から設定を変更してください。
 
 メイン画面において、使いたいコントローラの名前が表示されていてかつ、modeが正しければOKです。  
@@ -55,7 +55,7 @@ This tool is inspired from [dakendisplay tool](https://rag-oji.com/dakendisplay/
 |html/stats_detail.html|400×180（項目名なし: 340×180）|統計情報のみ（詳細、key・scr/vol内訳付き）|
 |html/scratch_speed.html|610×300|スクラッチの入力間隔をグラフ表示|
 
-メニューバーの「OBSに表示」では、各HTMLのサムネイルと推奨サイズを一覧で確認できます。
+メニューバーの「OBS用テンプレート」では、各HTMLのサムネイルと推奨サイズを一覧で確認できます。
 「ここをOBSへD&D」と書かれた部分をOBSのプレビュー画面へドラッグすると、ブラウザソースとして追加されます。
 この方法で追加したブラウザソースには、一覧に表示された推奨サイズが自動的に設定されます。
 OBSでURL追加の確認画面が表示された場合は「はい」を選択してください。
