@@ -200,6 +200,18 @@ class JoystickWebSocketServer(QMainWindow):
         self.mode_session_counts.setdefault(mode_name, {"key": 0, "other": 0})
         self.apply_mode_counts(mode_name)
         self.update_counter_display()
+        self.event_queue.put(self.notes_event())
+
+    def notes_event(self):
+        """HTMLビューへ送る打鍵数と内訳を作成する。"""
+        other_label = "vol" if self.settings.playmode == playmode.sdvx else "scr"
+        return {
+            "type": "notes",
+            "value": self.today_notes,
+            "key": self.today_keys,
+            "other": self.today_others,
+            "other_label": other_label,
+        }
 
     def increment_counter(self, count_key=False, count_other=False):
         if not count_key and not count_other:
@@ -219,7 +231,7 @@ class JoystickWebSocketServer(QMainWindow):
         self.today_notes += 1
         self.store_current_mode_counts()
         self.counter_update_requested.emit()
-        self.event_queue.put({"type": "notes", "value": self.today_notes})
+        self.event_queue.put(self.notes_event())
 
     def current_monthly_total(self):
         if not self.settings.count_log_enabled:
@@ -1143,6 +1155,7 @@ class JoystickWebSocketServer(QMainWindow):
         self.store_current_mode_counts()
         self.time_start = time.perf_counter()
         self.counter_label.setText(f"notes: {self.today_notes}")
+        self.event_queue.put(self.notes_event())
 
     def update_counter_display(self):
         if self.settings.playmode == playmode.sdvx:
@@ -1157,9 +1170,7 @@ class JoystickWebSocketServer(QMainWindow):
     async def websocket_handler(self, websocket):
         self.clients.add(websocket)
         try:
-            await websocket.send(
-                json.dumps([{"type": "notes", "value": self.today_notes}])
-            )
+            await websocket.send(json.dumps([self.notes_event()]))
             async for message in websocket:
                 pass
         finally:

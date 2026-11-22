@@ -62,10 +62,17 @@ HTML_VIEWS = (
     HtmlView("sdvx.html", "SDVX", "SDVXの入力表示", 870, 430),
     HtmlView(
         "stats_only.html",
-        "統計情報のみ",
-        "リリース・密度・ノーツ数のみ表示",
+        "統計情報のみ(1行)",
+        "リリース・密度・打鍵数を1行で表示",
         800,
         100,
+    ),
+    HtmlView(
+        "stats_detail.html",
+        "統計情報のみ（詳細）",
+        "平均値と合計打鍵数の内訳を複数行で表示",
+        400,
+        180,
     ),
     HtmlView(
         "scratch_speed.html",

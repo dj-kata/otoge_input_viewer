@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>統計情報のみ（詳細）</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            color: #f5f7ff;
+            font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+
+        body {
+            padding: 5px;
+            background: transparent;
+        }
+
+        .panel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            border: 1px solid rgba(155, 180, 255, 0.3);
+            border-radius: 9px;
+            background:
+                linear-gradient(135deg, rgba(19, 27, 48, 0.96), rgba(7, 12, 24, 0.96));
+            box-shadow: inset 0 0 30px rgba(69, 104, 180, 0.12);
+        }
+
+        .status-dot {
+            position: absolute;
+            z-index: 1;
+            top: 4px;
+            right: 4px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #64718c;
+            box-shadow: 0 0 5px #64718c;
+        }
+
+        .connected .status-dot {
+            background: #4dffb8;
+            box-shadow: 0 0 9px #4dffb8;
+        }
+
+        .rows {
+            height: 100%;
+            display: grid;
+            grid-template-rows: 1fr 1fr 1.1fr;
+            gap: 4px;
+        }
+
+        .stat-row {
+            position: relative;
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr) 38px;
+            align-items: center;
+            min-height: 0;
+            padding: 2px 8px 2px 11px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 6px;
+            background: rgba(10, 17, 32, 0.76);
+        }
+
+        .stat-row::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 3px;
+            background: var(--accent);
+            box-shadow: 0 0 14px var(--accent);
+        }
+
+        .release-row { --accent: #64ddff; --glow: rgba(100, 221, 255, 0.22); }
+        .density-row { --accent: #a78bfa; --glow: rgba(167, 139, 250, 0.22); }
+        .notes-row   { --accent: #ffd166; --glow: rgba(255, 209, 102, 0.22); }
+
+        .label-main {
+            display: block;
+            color: #edf2ff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .value {
+            justify-self: end;
+            color: var(--accent);
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+            text-shadow: 0 0 4px var(--glow);
+        }
+
+        .unit {
+            padding-left: 5px;
+            color: #aeb9d0;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .notes-row {
+            grid-template-columns: 60px minmax(0, 1fr) 104px;
+        }
+
+        .notes-row .value {
+            font-size: 32px;
+        }
+
+        .breakdown {
+            display: grid;
+            gap: 0;
+            margin-left: 8px;
+            padding-left: 8px;
+            border-left: 1px solid rgba(255, 255, 255, 0.13);
+        }
+
+        .breakdown-line {
+            display: grid;
+            grid-template-columns: 28px 1fr;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .breakdown-label {
+            color: #71809f;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .breakdown-value {
+            overflow: hidden;
+            color: #dce6fa;
+            font-size: 12px;
+            font-weight: 750;
+            text-align: right;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <main class="panel" id="panel">
+        <span class="status-dot"></span>
+        <section class="rows">
+            <div class="stat-row release-row">
+                <span class="label-main">RELEASE</span>
+                <span class="value" id="release">--</span>
+                <span class="unit">ms</span>
+            </div>
+            <div class="stat-row density-row">
+                <span class="label-main">DENSITY</span>
+                <span class="value" id="density">--</span>
+                <span class="unit">n/s</span>
+            </div>
+            <div class="stat-row notes-row">
+                <span class="label-main">NOTES</span>
+                <span class="value" id="notes">0</span>
+                <div class="breakdown">
+                    <div class="breakdown-line">
+                        <span class="breakdown-label">KEY</span>
+                        <span class="breakdown-value" id="key-notes">0</span>
+                    </div>
+                    <div class="breakdown-line">
+                        <span class="breakdown-label" id="other-label">SCR</span>
+                        <span class="breakdown-value" id="other-notes">0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let ws = null;
+
+        function numberText(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number.toLocaleString('ja-JP') : '--';
+        }
+
+        function setConnected(connected) {
+            document.getElementById('panel').classList.toggle('connected', connected);
+        }
+
+        function onMessage(event) {
+            let events;
+            try {
+                events = JSON.parse(event.data);
+            } catch (error) {
+                return;
+            }
+            if (!Array.isArray(events)) events = [events];
+            setConnected(true);
+
+            events.forEach(item => {
+                if (item.type === 'release') {
+                    document.getElementById('release').textContent = item.value;
+                } else if (item.type === 'density') {
+                    document.getElementById('density').textContent = item.value;
+                } else if (item.type === 'notes') {
+                    document.getElementById('notes').textContent = numberText(item.value);
+                    if (item.key !== undefined) {
+                        document.getElementById('key-notes').textContent = numberText(item.key);
+                    }
+                    if (item.other !== undefined) {
+                        document.getElementById('other-notes').textContent = numberText(item.other);
+                    }
+                    if (item.other_label) {
+                        document.getElementById('other-label').textContent = String(item.other_label).toUpperCase();
+                    }
+                }
+            });
+        }
+
+        function connect() {
+            if (ws !== null) return;
+            const style = getComputedStyle(document.documentElement);
+            const host = style.getPropertyValue('--host').trim().replace(/["']/g, '') || 'localhost';
+            const port = style.getPropertyValue('--port').trim() || '8765';
+            ws = new WebSocket(`ws://${host}:${port}`);
+            ws.onmessage = onMessage;
+            ws.onopen = () => setConnected(true);
+            ws.onclose = () => {
+                setConnected(false);
+                ws = null;
+                setTimeout(connect, 3000);
+            };
+        }
+
+        connect();
+    </script>
+</body>
+</html>
