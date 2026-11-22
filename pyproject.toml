@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "bs4>=0.0.2",
     "cx-freeze>=8.6.4",
+    "files-to-prompt>=0.6",
     "packaging>=25.0",
     "pillow>=11.3.0",
     "pygame>=2.6.1",

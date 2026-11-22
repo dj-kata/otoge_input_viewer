@@ -4,6 +4,7 @@ import websockets
 import asyncio
 import json
 import threading
+import ctypes
 from queue import Queue
 import os
 import sys
@@ -97,6 +98,10 @@ class JoystickWebSocketServer(QMainWindow):
         self.mapped_button_axis_direction = {}
         self.held_axis_button_events = {}
         self.held_axis_button_lock = threading.Lock()
+        self.keyboard_key_states = {}
+        self.get_async_key_state = None
+        if sys.platform == "win32":
+            self.get_async_key_state = ctypes.windll.user32.GetAsyncKeyState
         self.list_density = []
         self.settings = Settings()
         self.count_history = CountHistory()
@@ -789,7 +794,7 @@ class JoystickWebSocketServer(QMainWindow):
         )
 
     def monitor_thread(self):
-        """ジョイパッドの入力イベントを受け取るループ"""
+        """ジョイパッドとPCキーボードの入力イベントを受け取るループ"""
         print("monitor_thread start")
         while True:
             try:
@@ -810,6 +815,7 @@ class JoystickWebSocketServer(QMainWindow):
                         self.process_mapped_joystick_event(event)
                     else:
                         self.process_joystick_event(event)
+                self.poll_keyboard_events()
                 if pygame.joystick.get_count() == 0:
                     for i in range(2):
                         self.label_update_requested.emit(
@@ -818,6 +824,37 @@ class JoystickWebSocketServer(QMainWindow):
             except Exception as e:
                 logger.debug(traceback.format_exc())
             pygame.time.wait(20)
+
+    def configured_keyboard_keys(self):
+        return {
+            spec.get("control_id")
+            for _, spec, _ in self.mapped_target_entries()
+            if spec.get("event_type") == "keyboard"
+            and isinstance(spec.get("control_id"), int)
+            and 0 < spec.get("control_id") < 256
+        }
+
+    def poll_keyboard_events(self):
+        """設定済みのPCキーだけを監視する（Windowsでは非アクティブ時も取得）。"""
+        if self.get_async_key_state is None:
+            return
+        configured_keys = self.configured_keyboard_keys()
+        for virtual_key in configured_keys:
+            key_state = self.get_async_key_state(virtual_key)
+            pressed = bool(key_state & 0x8000)
+            changed_since_poll = bool(key_state & 0x0001)
+            previous = self.keyboard_key_states.get(virtual_key)
+            self.keyboard_key_states[virtual_key] = pressed
+            if previous is None or self.key_config_dialog is not None:
+                continue
+            if previous != pressed:
+                self.process_mapped_keyboard_event(virtual_key, pressed)
+            elif changed_since_poll:
+                # 20msの監視間隔内で押下・解放された短い入力も取りこぼさない。
+                self.process_mapped_keyboard_event(virtual_key, not pressed)
+                self.process_mapped_keyboard_event(virtual_key, pressed)
+        for virtual_key in set(self.keyboard_key_states) - configured_keys:
+            self.keyboard_key_states.pop(virtual_key, None)
 
     def dispatch_event_data(
         self, event_data, count_notes=False, count_key=False, count_other=False
@@ -951,6 +988,37 @@ class JoystickWebSocketServer(QMainWindow):
                     event_data, count_notes=is_down, count_other=is_down
                 )
 
+    def process_mapped_keyboard_event(self, virtual_key, is_down):
+        matched_targets = [
+            (target_id, registered_spec, target)
+            for target_id, registered_spec, target in self.mapped_target_entries()
+            if registered_spec.get("event_type") == "keyboard"
+            and registered_spec.get("control_id") == virtual_key
+        ]
+        for target_id, registered_spec, target in matched_targets:
+            if target["kind"] == "button":
+                event_data = target_to_event_data(
+                    target, state="down" if is_down else "up"
+                )
+                self.dispatch_event_data(
+                    event_data, count_notes=is_down, count_key=is_down
+                )
+            elif target["kind"] == "axis_dir":
+                hold_key = (target_id, spec_key(registered_spec))
+                event_data = target_to_event_data(
+                    target, value=1 if is_down else 0
+                )
+                with self.held_axis_button_lock:
+                    if is_down:
+                        self.held_axis_button_events[hold_key] = target_to_event_data(
+                            target
+                        )
+                    else:
+                        self.held_axis_button_events.pop(hold_key, None)
+                self.dispatch_event_data(
+                    event_data, count_notes=is_down, count_other=is_down
+                )
+
     def process_joystick_event(self, event):
         """1つのジョイパッド入力イベントを読み込んでwebsocket出力に変換する。
 
@@ -1029,6 +1097,7 @@ class JoystickWebSocketServer(QMainWindow):
             self.event_queue.put(event_data)
 
     def reset_counter(self):
+        self.save_current_mode_session_history()
         self.today_notes = 0
         self.today_keys = 0
         self.today_others = 0
@@ -1145,6 +1214,24 @@ class JoystickWebSocketServer(QMainWindow):
                     counts.get("key", 0),
                     counts.get("other", 0),
                 )
+        self.count_history.save()
+
+    def save_current_mode_session_history(self):
+        if not self.settings.count_log_enabled:
+            return
+        mode_name = self.settings.playmode.name
+        counts = self.mode_session_counts.setdefault(
+            mode_name, {"key": 0, "other": 0}
+        )
+        self.count_history.add_session(
+            mode_name,
+            counts.get("key", 0),
+            counts.get("other", 0),
+            ended_at=datetime.now(),
+        )
+        self.mode_session_counts[mode_name] = {"key": 0, "other": 0}
+        if not self.settings.count_log_auto_reset:
+            self.count_history.set_carryover(mode_name, 0, 0)
         self.count_history.save()
 
     def on_close(self):

@@ -1,6 +1,7 @@
 import copy
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -104,6 +105,21 @@ def event_to_spec(event, joystick_name="", event_type_name=None, direction=None,
     return None
 
 
+def keyboard_event_to_spec(event):
+    """Qtのキーイベントを保存可能なPCキーボード設定へ変換する。"""
+    virtual_key = int(event.nativeVirtualKey())
+    if virtual_key <= 0:
+        return None
+    key_name = QKeySequence(event.key()).toString(QKeySequence.NativeText)
+    if not key_name:
+        key_name = event.text() or f"VK {virtual_key}"
+    return {
+        "event_type": "keyboard",
+        "control_id": virtual_key,
+        "key_name": key_name,
+    }
+
+
 def spec_key(spec):
     return (
         spec.get("controller_name", ""),
@@ -127,6 +143,9 @@ def spec_matches(registered_spec, event_spec):
 def format_spec(spec):
     if not spec:
         return ""
+    if spec.get("event_type") == "keyboard":
+        key_name = spec.get("key_name") or f"VK {spec.get('control_id')}"
+        return f"PCキーボード / {key_name}"
     event_label = "button" if spec.get("event_type") == "button" else "axis"
     direction_label = ""
     if spec.get("event_type") == "axis" and spec.get("direction") is not None:
@@ -175,7 +194,7 @@ class CaptureLineEdit(QLineEdit):
         super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
-        if self.dialog.handle_capture_key(event.key()):
+        if self.dialog.capture_keyboard_event(event):
             return
         super().keyPressEvent(event)
 
@@ -212,7 +231,7 @@ class KeyConfigDialog(QDialog):
         top.addStretch()
         layout.addLayout(top)
 
-        self.status_label = QLabel("入力欄をクリックして、割り当てたいコントローラ入力を押してください。Escでキャンセル、Delで削除。")
+        self.status_label = QLabel("入力欄をクリックして、割り当てたいコントローラ入力またはPCキーを押してください。Escでキャンセル、Delで削除。")
         layout.addWidget(self.status_label)
 
         self.scroll_area = QScrollArea(self)
@@ -289,7 +308,7 @@ class KeyConfigDialog(QDialog):
         self.capture_target_id = target_id
         for item_id, entry in self.inputs.items():
             entry.setStyleSheet("background: #fff3bf;" if item_id == target_id else "")
-        self.status_label.setText("入力待ちです。コントローラを操作してください。Escでキャンセル、Delで削除。")
+        self.status_label.setText("入力待ちです。コントローラを操作するかPCキーを押してください。Escでキャンセル、Delで削除。")
 
     def receive_event(self, spec):
         if self.capture_target_id is None:
@@ -349,8 +368,20 @@ class KeyConfigDialog(QDialog):
                 return True
         return False
 
-    def keyPressEvent(self, event):
+    def capture_keyboard_event(self, event):
         if self.handle_capture_key(event.key()):
+            return True
+        if self.capture_target_id is None:
+            return False
+        if event.isAutoRepeat():
+            return True
+        spec = keyboard_event_to_spec(event)
+        if spec is not None:
+            self.receive_event(spec)
+        return True
+
+    def keyPressEvent(self, event):
+        if self.capture_keyboard_event(event):
             return
         super().keyPressEvent(event)
 

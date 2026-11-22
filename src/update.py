@@ -119,7 +119,13 @@ class GitHubUpdater(QObject):
             )
             
             # バージョン比較
-            if version.parse(latest_version) > version.parse(current_version):
+            try:
+                parsed_current_version = version.parse(current_version)
+            except version.InvalidVersion:
+                logger.warning(f"invalid current_version:{self.current_version}, fallback to 0.0.0")
+                parsed_current_version = version.parse("0.0.0")
+
+            if version.parse(latest_version) > parsed_current_version:
                 return True, latest_tag, download_url
             else:
                 return False, latest_tag, None
