@@ -42,3 +42,8 @@ density {
     font-family: "DSEG14Classic";
     font-weight: bold;
 }
+
+html.stats-view-graph .statistics-modern {
+    height: 70px;
+    margin-top: 0;
+}

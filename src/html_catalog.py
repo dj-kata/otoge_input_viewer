@@ -25,12 +25,17 @@ class HtmlView:
     width: int
     height: int
     width_without_labels: int | None = None
+    statistics_options: bool = False
 
     @property
     def thumbnail_filename(self) -> str:
         return f"{Path(self.filename).stem}.png"
 
-    def thumbnail_filename_for(self, show_labels: bool) -> str:
+    def thumbnail_filename_for(
+        self, show_labels: bool, stats_view: str = "text"
+    ) -> str:
+        if self.statistics_options and stats_view == "graph":
+            return f"{Path(self.filename).stem}_graph.png"
         if self.width_without_labels is not None and not show_labels:
             return f"{Path(self.filename).stem}_no_labels.png"
         return self.thumbnail_filename
@@ -48,6 +53,7 @@ HTML_VIEWS = (
         "リリースタイムを色分けして表示",
         580,
         370,
+        statistics_options=True,
     ),
     HtmlView(
         "iidx_2p_color.html",
@@ -55,6 +61,7 @@ HTML_VIEWS = (
         "リリースタイムを色分けして表示",
         580,
         370,
+        statistics_options=True,
     ),
     HtmlView(
         "iidx_dp_color.html",
@@ -62,6 +69,7 @@ HTML_VIEWS = (
         "リリースタイムを色分けして表示",
         1200,
         370,
+        statistics_options=True,
     ),
     HtmlView(
         "sdvx_color.html",
@@ -69,15 +77,51 @@ HTML_VIEWS = (
         "リリースタイムを色分けして表示",
         870,
         430,
+        statistics_options=True,
     ),
-    HtmlView("iidx_1p.html", "IIDX 1P", "IIDX 1P側の入力表示", 700, 400),
-    HtmlView("iidx_2p.html", "IIDX 2P", "IIDX 2P側の入力表示", 700, 400),
-    HtmlView("iidx_dp.html", "IIDX DP", "IIDX DPの入力表示", 1400, 400),
-    HtmlView("sdvx.html", "SDVX", "SDVXの入力表示", 870, 430),
+    HtmlView(
+        "iidx_1p.html",
+        "IIDX 1P",
+        "IIDX 1P側の入力表示",
+        700,
+        400,
+        statistics_options=True,
+    ),
+    HtmlView(
+        "iidx_2p.html",
+        "IIDX 2P",
+        "IIDX 2P側の入力表示",
+        700,
+        400,
+        statistics_options=True,
+    ),
+    HtmlView(
+        "iidx_dp.html",
+        "IIDX DP",
+        "IIDX DPの入力表示",
+        1400,
+        400,
+        statistics_options=True,
+    ),
+    HtmlView(
+        "sdvx.html",
+        "SDVX",
+        "SDVXの入力表示",
+        870,
+        430,
+        statistics_options=True,
+    ),
     HtmlView(
         "stats_only.html",
         "統計情報のみ(1行)",
         "リリース・密度・打鍵数を1行で表示",
+        800,
+        100,
+    ),
+    HtmlView(
+        "stats_graph.html",
+        "統計情報のみ（グラフ）",
+        "リリース・密度をグラフ、打鍵数を大きく表示",
         800,
         100,
     ),
@@ -100,7 +144,10 @@ HTML_VIEWS = (
 
 
 def build_obs_source_url(
-    view: HtmlView, server_port: int, show_labels: bool = True
+    view: HtmlView,
+    server_port: int,
+    show_labels: bool = True,
+    stats_view: str = "text",
 ) -> QUrl:
     source_url = QUrl(f"http://127.0.0.1:{server_port}/{view.filename}")
     query = QUrlQuery()
@@ -109,6 +156,8 @@ def build_obs_source_url(
     query.addQueryItem("layer-height", str(view.height))
     if view.width_without_labels is not None:
         query.addQueryItem("show-labels", "1" if show_labels else "0")
+    if view.statistics_options:
+        query.addQueryItem("stats-view", stats_view)
     source_url.setQuery(query)
     return source_url
 
@@ -192,6 +241,7 @@ class HtmlViewCard(QFrame):
         self.html_dir = html_dir
         self.server_port = server_port
         self.show_labels = True
+        self.stats_view = "text"
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -228,6 +278,23 @@ class HtmlViewCard(QFrame):
             options_layout.addStretch()
             layout.addWidget(options)
 
+        if view.statistics_options:
+            options = QWidget()
+            options_layout = QHBoxLayout(options)
+            options_layout.setContentsMargins(0, 0, 0, 0)
+            options_layout.setSpacing(12)
+            options_layout.addWidget(QLabel("統計表示:"))
+            self.stats_text_radio = QRadioButton("従来の文字表示")
+            self.stats_graph_radio = QRadioButton("グラフ表示")
+            self.stats_text_radio.setChecked(True)
+            self.stats_button_group = QButtonGroup(self)
+            self.stats_button_group.addButton(self.stats_text_radio)
+            self.stats_button_group.addButton(self.stats_graph_radio)
+            options_layout.addWidget(self.stats_text_radio)
+            options_layout.addWidget(self.stats_graph_radio)
+            options_layout.addStretch()
+            layout.addWidget(options)
+
         self.size_label = QLabel()
         self.size_label.setStyleSheet("color: #a9cfff;")
         layout.addWidget(self.size_label)
@@ -235,18 +302,33 @@ class HtmlViewCard(QFrame):
         self.drag_label = HtmlDragLabel(QUrl(), QPixmap(), self)
         layout.addWidget(self.drag_label)
 
-        self.update_variant(True)
+        self.update_variant()
 
         if view.width_without_labels is not None:
             self.labels_on_radio.toggled.connect(self.update_variant)
+        if view.statistics_options:
+            self.stats_text_radio.toggled.connect(self.update_variant)
 
-    def update_variant(self, show_labels: bool):
+    def update_variant(self, *_):
+        show_labels = (
+            self.labels_on_radio.isChecked()
+            if self.view.width_without_labels is not None
+            else True
+        )
+        stats_view = (
+            "graph"
+            if self.view.statistics_options and self.stats_graph_radio.isChecked()
+            else "text"
+        )
         self.show_labels = show_labels
+        self.stats_view = stats_view
         thumbnail_path = (
             self.html_dir
             / "thumbnails"
-            / self.view.thumbnail_filename_for(show_labels)
+            / self.view.thumbnail_filename_for(show_labels, stats_view)
         )
+        if not thumbnail_path.exists():
+            thumbnail_path = self.html_dir / "thumbnails" / self.view.thumbnail_filename
         pixmap = QPixmap(str(thumbnail_path))
         self.thumbnail.clear()
         if pixmap.isNull():
@@ -262,7 +344,8 @@ class HtmlViewCard(QFrame):
         width = self.view.width_for(show_labels)
         self.size_label.setText(f"推奨サイズ: {width} × {self.view.height}")
         self.drag_label.set_source(
-            build_obs_source_url(self.view, self.server_port, show_labels), pixmap
+            build_obs_source_url(self.view, self.server_port, show_labels, stats_view),
+            pixmap,
         )
 
 

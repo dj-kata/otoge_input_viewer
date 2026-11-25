@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>統計情報のみ（グラフ）</title>
+    <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="websocket.css" />
+    <link rel="stylesheet" type="text/css" href="statistics_panel.css" />
+</head>
+<body class="statistics-only-page">
+    <main class="statistics-modern statistics-standalone" data-statistics-panel></main>
+
+    <script src="statistics_panel.js"></script>
+    <script>
+        let ws = null;
+
+        function onMessage(event) {
+            let events;
+            try {
+                events = JSON.parse(event.data);
+            } catch (error) {
+                return;
+            }
+            if (!Array.isArray(events)) events = [events];
+            events.forEach(item => {
+                if (item.type === 'release' || item.type === 'density' || item.type === 'notes') {
+                    updateStatisticsPanel(item.type, item.value);
+                }
+            });
+        }
+
+        function connect() {
+            if (ws !== null) return;
+            const style = getComputedStyle(document.documentElement);
+            const host = style.getPropertyValue('--host').trim().replace(/["']/g, '') || 'localhost';
+            const port = style.getPropertyValue('--port').trim() || '8765';
+            ws = new WebSocket(`ws://${host}:${port}`);
+            ws.onmessage = onMessage;
+            ws.onclose = () => {
+                ws = null;
+                setTimeout(connect, 3000);
+            };
+        }
+
+        connect();
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 [project]
 name = "otoge-input-viewer"
 version = "0.1.0"
-description = "Add your description here"
+description = "otoge input viewer - input display tool"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

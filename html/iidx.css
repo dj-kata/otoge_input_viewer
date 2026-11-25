@@ -6,7 +6,7 @@ html {
 
 body {
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.99);
+    background-color: transparent;
     margin: 0px;
     padding: 0px;
     font-family: 'RocknRoll One', sans-serif;
@@ -17,7 +17,7 @@ body {
 
 .background {
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: var(--bg-background);
     background-size: 100% 100%;
     background-position: left top;
     background-repeat: no-repeat;

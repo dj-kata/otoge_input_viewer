@@ -3,6 +3,7 @@
 <head>
     <title>Otoge Input Viewer(SDVX)</title>
     <link rel="stylesheet" type="text/css" href="property.css" />
+    <link rel="stylesheet" type="text/css" href="statistics_panel.css" />
     <link rel="stylesheet" type="text/css" href="sdvx.css" />
     <link rel="stylesheet" type="text/css" href="sdvx_color.css" />
     <link rel="stylesheet" type="text/css" href="websocket.css" /> <!-- websocketのポートを変更する場合はここに書く。cssが存在しない場合はデフォ(8765) -->
@@ -67,6 +68,7 @@
         </tr>
 
     </table>
+    <div class="statistics-modern" data-statistics-panel></div>
     <table class="info">
         <center>
             <tr>
@@ -80,6 +82,7 @@
     </table>
   </div>
 
+    <script src="statistics_panel.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
         var ws = null;
@@ -172,6 +175,7 @@
                     }
                   }else if (e.type == 'release'){
                     $('release').html(e.value)
+                    updateStatisticsPanel('release', e.value)
                   }else if (e.type == 'release_eachkey'){
                     var btn = e.button+1
                     last_release[btn] = Number(e.value)
@@ -194,8 +198,10 @@
                     }
                   }else if (e.type == 'density'){
                     $('density').html(e.value)
+                    updateStatisticsPanel('density', e.value)
                   }else if (e.type == 'notes'){
                     $('notes').html(e.value)
+                    updateStatisticsPanel('notes', e.value)
                   }
                 })
             } catch (e) {
