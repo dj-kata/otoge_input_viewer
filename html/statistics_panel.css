@@ -46,7 +46,7 @@ html.statistics-preview warning {
 .statistics-row {
     display: grid;
     grid-template-columns: minmax(70px, 1fr) 70px 27px;
-    align-items: flex-end;
+    align-items: center;
     min-width: 0;
     padding: 3px 7px 3px 10px;
 }
@@ -63,14 +63,10 @@ html.statistics-preview warning {
     --statistics-accent: #ffd166;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     min-width: 0;
     padding: 2px 4px;
-}
-
-html.stats-view-graph .statistics-modern:not(.statistics-standalone) .statistics-notes {
-    transform: translateX(36px);
 }
 
 .statistics-meter {
