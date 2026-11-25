@@ -108,6 +108,7 @@ class JoystickWebSocketServer(QMainWindow):
         if sys.platform == "win32":
             self.get_async_key_state = ctypes.windll.user32.GetAsyncKeyState
         self.list_density = []
+        self.density_lock = threading.Lock()
         self.settings = Settings()
         self.application_dir = (
             Path(sys.executable).resolve().parent
@@ -543,33 +544,18 @@ class JoystickWebSocketServer(QMainWindow):
         while True:
             cur_time = time.perf_counter()
             if cur_time - time_last_sent > self.settings.density_interval:  # 各種出力
-                if len(self.list_density) > 0:  # 密度の出力
-                    if (
-                        cur_time - self.list_density[-1]
-                        > self.settings.density_interval
-                    ):
-                        self.list_density = []
-                    for i in range(len(self.list_density)):
-                        if (
-                            cur_time - self.list_density[i]
-                            <= self.settings.density_interval
-                        ):
-                            break
-                    self.list_density = self.list_density[
-                        i:
-                    ]  # 直近5秒以内の範囲だけに整形
-                    if (len(self.list_density) == 0) or (
-                        cur_time == self.list_density[0]
-                    ):
-                        density = 0.0
-                    else:
-                        # density = len(self.list_density) / (cur_time - self.list_density[0])
-                        density = (
-                            len(self.list_density) / self.settings.density_interval
-                        )
-                        # logger.debug(f"len:{len(self.list_density)}, {self.list_density}, width:{cur_time - self.list_density[0]}s, density:{density:.2f}")
-                    event_data = {"type": "density", "value": f"{density:.1f}"}
-                    self.event_queue.put(event_data)
+                cutoff = cur_time - self.settings.density_interval
+                with self.density_lock:
+                    self.list_density = [
+                        timestamp
+                        for timestamp in self.list_density
+                        if timestamp >= cutoff
+                    ]
+                    density = (
+                        len(self.list_density) / self.settings.density_interval
+                    )
+                event_data = {"type": "density", "value": f"{density:.1f}"}
+                self.event_queue.put(event_data)
                 time_last_sent = cur_time
             time.sleep(0.1)
 
@@ -588,7 +574,9 @@ class JoystickWebSocketServer(QMainWindow):
                 key = tmp["button"] + tmp["controller_side"] * 7  # どの鍵盤か
                 if tmp["state"] == "down":
                     time_last_active[key] = cur_time
-                    self.list_density.append(cur_time)  # LNは関係なく密度計算には使う
+                    with self.density_lock:
+                        # LNは関係なく密度計算には使う
+                        self.list_density.append(cur_time)
                 else:
                     tmp_release = cur_time - time_last_active[key]
                     if tmp_release < self.settings.ln_threshold / 1000:
@@ -616,7 +604,8 @@ class JoystickWebSocketServer(QMainWindow):
 
             elif tmp["type"] == "axis":  # スクラッチ
                 if tmp["direction"] != list_last_scratch[tmp["axis"]]:
-                    self.list_density.append(cur_time)
+                    with self.density_lock:
+                        self.list_density.append(cur_time)
                 list_last_scratch[tmp["axis"]] = tmp["direction"]
 
     def thread_uptime(self):
