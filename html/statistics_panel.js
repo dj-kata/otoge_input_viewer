@@ -95,10 +95,7 @@
 
     window.updateStatisticsPanel = function (kind, rawValue) {
         if (window.statisticsPreviewMode) return;
-        const number = Number(rawValue);
-        const text = kind === 'notes' && Number.isFinite(number)
-            ? number.toLocaleString('ja-JP')
-            : String(rawValue);
+        const text = String(rawValue);
         document.querySelectorAll(`[data-statistics-value="${kind}"]`).forEach(element => {
             element.textContent = text;
             if (kind === 'notes') fitNotesValue(element);

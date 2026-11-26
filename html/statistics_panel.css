@@ -1,5 +1,13 @@
 @charset "UTF-8";
 
+@font-face {
+    font-family: "DSEG14Classic";
+    src: url("DSEG14Classic-Bold.woff2") format("woff2");
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
 .statistics-modern {
     display: none;
     grid-template-columns: minmax(0, 1fr) minmax(270px, 0.8fr);
@@ -108,9 +116,10 @@ html.statistics-preview warning {
 .statistics-notes-value {
     max-width: 100%;
     overflow: hidden;
-    color: #ffd166;
+    color: var(--color-notes);
+    font-family: "DSEG14Classic";
     font-size: 56px;
-    font-weight: 850;
+    font-weight: bold;
     line-height: 0.95;
     letter-spacing: -0.03em;
     text-overflow: clip;
